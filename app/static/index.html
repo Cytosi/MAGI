@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EVA Three Magi System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Audiowide&family=Oxanium:wght@400;500;700;800&family=Noto+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="grid"></div>
+    <div class="scanline"></div>
+    <div class="frame-noise"></div>
+
+    <main class="shell">
+      <header class="title-bar panel">
+        <div class="title-core">
+          <span class="title-kicker">NERV DECISION ENGINE</span>
+          <h1>MAGI SYSTEM</h1>
+        </div>
+        <div class="title-side">
+          <div class="status-inline">
+            <span>STATUS</span>
+            <strong id="systemStatus">BOOTING</strong>
+          </div>
+          <div class="status-inline">
+            <span>DECK</span>
+            <strong id="activeViewLabel">INFERENCE DECK</strong>
+          </div>
+        </div>
+      </header>
+
+      <section id="inferenceView" class="view active">
+        <div class="magi-stage">
+          <section class="panel node-frame top-node">
+            <div class="node-banner">BALTHASAR-2</div>
+            <div id="balthasarSlot" class="node-slot"></div>
+          </section>
+
+          <section class="panel node-frame left-node">
+            <div class="node-banner">CASPER-3</div>
+            <div id="casperSlot" class="node-slot"></div>
+          </section>
+
+          <section class="center-stage">
+            <div class="center-label panel">MAGI</div>
+
+            <section class="panel module bridge-panel">
+              <div class="module-head">
+                <span class="module-tag">PETITION</span>
+                <button type="button" id="openConfigButton" class="ghost-button">SETTINGS</button>
+              </div>
+              <form id="chatForm">
+                <label for="prompt">Mission Prompt</label>
+                <textarea
+                  id="prompt"
+                  name="prompt"
+                  placeholder="Example: Design a launch strategy for an AI product, including architecture, safeguards, frontend experience, and rollout phases."
+                ></textarea>
+
+                <div class="action-row">
+                  <button type="submit" id="submitButton">INITIATE DELIBERATION</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel module verdict-panel">
+              <div class="module-head verdict-head">
+                <span class="module-tag">RESOLUTION</span>
+                <div id="evaluationMeta" class="evaluation-meta">Awaiting evaluator output.</div>
+              </div>
+              <pre id="consensusOutput">Open the settings deck, configure the MAGI council, and begin deliberation.</pre>
+            </section>
+
+            <section class="panel module history-panel">
+              <div class="module-head">
+                <span class="module-tag">MEMORY ARCHIVE</span>
+                <button type="button" id="clearHistoryButton" class="ghost-button">CLEAR MEMORY</button>
+              </div>
+              <div id="historyList" class="history-list">
+                <div class="history-empty">No archived deliberations yet.</div>
+              </div>
+            </section>
+          </section>
+
+          <section class="panel node-frame right-node">
+            <div class="node-banner">MELCHIOR-1</div>
+            <div id="melchiorSlot" class="node-slot"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="configView" class="view hidden">
+        <div class="config-stage">
+          <section class="panel module config-main">
+            <div class="module-head">
+              <span class="module-tag">SYSTEM CONFIGURATION</span>
+              <button type="button" id="backToInferenceButton" class="ghost-button">RETURN TO MAGI</button>
+            </div>
+
+            <p class="module-copy">
+              Assign three distinct providers to the MAGI council. Each node must use a unique
+              provider endpoint, while credentials remain server-side.
+            </p>
+
+            <form id="configForm" class="config-form"></form>
+
+            <div class="action-row">
+              <button type="button" class="ghost-button" id="useRecommended">LOAD RECOMMENDED SETUP</button>
+              <button type="submit" form="configForm" id="saveConfigButton">SAVE CONFIGURATION</button>
+            </div>
+          </section>
+
+          <section class="config-side">
+            <section class="panel module tuning-panel">
+              <div class="module-head">
+                <span class="module-tag">RUNTIME TUNING</span>
+              </div>
+
+              <div class="tuning-stack">
+                <article class="tuning-block">
+                  <label for="systemPrompt">System Directive</label>
+                  <textarea
+                    id="systemPrompt"
+                    name="systemPrompt"
+                  >Return final answers only. Do not expose reasoning. Respond in Chinese and include conclusion, execution plan, and risks.</textarea>
+                </article>
+                <article class="tuning-block">
+                  <label for="temperature">Temperature <span id="temperatureValue">0.4</span></label>
+                  <input id="temperature" type="range" min="0" max="1.5" step="0.1" value="0.4" />
+                </article>
+                <article class="tuning-block">
+                  <label for="maxTokens">Max Output Tokens</label>
+                  <input id="maxTokens" type="number" min="128" max="4000" step="64" value="900" />
+                </article>
+              </div>
+            </section>
+
+            <section class="panel module tips-panel">
+              <div class="module-head">
+                <span class="module-tag">CONFIG NOTES</span>
+              </div>
+              <div class="notes">
+                <p>All MAGI nodes must use unique providers.</p>
+                <p>API credentials are hosted on the server and never stored in the browser.</p>
+                <p>Qwen, DeepSeek, and Doubao use OpenAI-compatible chat endpoints.</p>
+                <p>Custom mode requires a server-side integration before public deployment.</p>
+                <p>Public deployments should avoid exposing provider secrets to frontend users.</p>
+              </div>
+            </section>
+          </section>
+        </div>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
