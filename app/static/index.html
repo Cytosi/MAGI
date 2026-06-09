@@ -37,6 +37,50 @@
 
       <section id="inferenceView" class="view active">
         <div class="magi-stage">
+          <div class="stage-ornament support-left">
+            <span>SUPPORT LINE</span>
+            <div class="support-panel support-panel-pilot">
+              <img
+                src="https://commons.wikimedia.org/wiki/Special:Redirect/file/Maple_leave_NERV.png"
+                alt="NERV insignia"
+              />
+              <small>WELCOME, PILOT</small>
+              <strong id="pilotNameDisplay">SHINJI IKARI</strong>
+              <small>ENTRY PLUG LINKED</small>
+            </div>
+          </div>
+          <div class="stage-ornament support-right">
+            <span>SUPPORT LINE</span>
+            <div class="support-panel support-panel-songs">
+              <small>THEME SELECTION</small>
+              <div id="musicPanel" class="music-panel">
+                <div class="music-empty">Loading local EVA tracks...</div>
+              </div>
+              <div id="musicStatus" class="music-status">Awaiting playback command.</div>
+            </div>
+          </div>
+          <div class="stage-ornament city-left">
+            <span>U.S.A</span>
+            <strong>MASSACHUSETTS</strong>
+          </div>
+          <div class="stage-ornament city-right">
+            <span>GERMANY</span>
+            <strong>BERLIN</strong>
+          </div>
+          <div class="stage-ornament center-top">
+            <span>TOKYO-3</span>
+          </div>
+          <div class="stage-ornament verdict-left">
+            <span>RESULT OF THE DELIBERATION</span>
+            <strong>MOTION: MAGI DECISION</strong>
+          </div>
+          <div class="stage-ornament verdict-right">
+            <span>MAIN BARRIER</span>
+            <strong>DECISION FRAME</strong>
+          </div>
+          <div class="side-rail left-rail" aria-hidden="true"></div>
+          <div class="side-rail right-rail" aria-hidden="true"></div>
+
           <section class="panel node-frame top-node">
             <div class="node-banner">BALTHASAR-2</div>
             <div id="balthasarSlot" class="node-slot"></div>
@@ -108,6 +152,10 @@
               provider endpoint, while credentials remain server-side.
             </p>
 
+            <div id="serverSetupNotice" class="server-setup-notice">
+              Checking server credential status...
+            </div>
+
             <form id="configForm" class="config-form"></form>
 
             <div class="action-row">
@@ -123,6 +171,16 @@
               </div>
 
               <div class="tuning-stack">
+                <article class="tuning-block">
+                  <label for="pilotName">Pilot Name</label>
+                  <input
+                    id="pilotName"
+                    name="pilotName"
+                    type="text"
+                    value="Shinji Ikari"
+                    placeholder="Enter pilot name"
+                  />
+                </article>
                 <article class="tuning-block">
                   <label for="systemPrompt">System Directive</label>
                   <textarea
@@ -150,6 +208,7 @@
                 <p>API credentials are hosted on the server and never stored in the browser.</p>
                 <p>Qwen, DeepSeek, and Doubao use OpenAI-compatible chat endpoints.</p>
                 <p>Custom mode requires a server-side integration before public deployment.</p>
+                <p>Initialize providers on the server by editing the project `.env` file.</p>
                 <p>Public deployments should avoid exposing provider secrets to frontend users.</p>
               </div>
             </section>
@@ -157,6 +216,7 @@
         </div>
       </section>
     </main>
+    <audio id="themeAudio" preload="none"></audio>
     <script src="/static/app.js"></script>
   </body>
 </html>

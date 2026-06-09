@@ -1,10 +1,8 @@
 Place licensed EVA-related font files here if you want the UI to use them directly.
 
-Supported filenames:
-- EVA-Matisse-Display.woff2
-- EVA-Matisse-Display.woff
-- EVA-Matisse-UI.woff2
-- EVA-Matisse-UI.woff
+Current preferred webfont files:
+- EVA-Matisse-Classic.woff2
+- FOT-MatissePro-EB.woff2
 
 The CSS already prefers installed official-related fonts such as:
 - EVA Matisse Classic

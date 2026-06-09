@@ -28,6 +28,7 @@ EVALUATOR_PRIORITY = ["qwen", "gpt", "gemini", "deepseek", "doubao", "custom"]
 
 class MagiOrchestrator:
     def catalog(self) -> CatalogResponse:
+        env_defaults = get_env_provider_defaults()
         presets = [
             ProviderPresetResponse(
                 key=item.key,
@@ -35,10 +36,10 @@ class MagiOrchestrator:
                 base_url=item.base_url,
                 default_model=item.default_model,
                 docs_url=item.docs_url,
+                server_ready=bool(env_defaults.get(item.key, {}).get("api_key")) if item.key != "custom" else False,
             )
             for item in get_provider_presets()
         ]
-        env_defaults = get_env_provider_defaults()
         recommended = [
             ProviderSelection(
                 slot="melchior",
@@ -46,6 +47,7 @@ class MagiOrchestrator:
                 label="Doubao",
                 model=env_defaults["doubao"]["model"],
                 base_url=env_defaults["doubao"]["base_url"],
+                server_ready=bool(env_defaults["doubao"]["api_key"]),
             ),
             ProviderSelection(
                 slot="balthasar",
@@ -53,6 +55,7 @@ class MagiOrchestrator:
                 label="DeepSeek",
                 model=env_defaults["deepseek"]["model"],
                 base_url=env_defaults["deepseek"]["base_url"],
+                server_ready=bool(env_defaults["deepseek"]["api_key"]),
             ),
             ProviderSelection(
                 slot="casper",
@@ -60,6 +63,7 @@ class MagiOrchestrator:
                 label="Qwen",
                 model=env_defaults["qwen"]["model"],
                 base_url=env_defaults["qwen"]["base_url"],
+                server_ready=bool(env_defaults["qwen"]["api_key"]),
             ),
         ]
         return CatalogResponse(presets=presets, recommended=recommended)

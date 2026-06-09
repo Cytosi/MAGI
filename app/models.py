@@ -17,6 +17,7 @@ class ProviderSelection(BaseModel):
     label: str = Field(default="", max_length=80)
     model: str = Field(default="", max_length=120)
     base_url: str = Field(default="", max_length=500)
+    server_ready: bool = False
 
 
 class ChatRequest(BaseModel):
@@ -98,8 +99,23 @@ class ProviderPresetResponse(BaseModel):
     base_url: str
     default_model: str
     docs_url: str
+    server_ready: bool = False
 
 
 class CatalogResponse(BaseModel):
     presets: list[ProviderPresetResponse]
     recommended: list[ProviderSelection]
+
+
+class MusicTrackResponse(BaseModel):
+    id: str
+    title: str
+    artist: str
+    filename: str
+    available: bool
+    reason: str | None = None
+
+
+class MusicLibraryResponse(BaseModel):
+    root: str
+    tracks: list[MusicTrackResponse]

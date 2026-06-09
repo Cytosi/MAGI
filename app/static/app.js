@@ -1,5 +1,6 @@
 const STORAGE_KEY = "eva-magi-runtime-config";
 const HISTORY_KEY = "eva-magi-history";
+const PILOT_NAME_KEY = "eva-magi-pilot-name";
 const SLOT_ORDER = ["melchior", "balthasar", "casper"];
 const SLOT_TITLES = {
   melchior: "MELCHIOR",
@@ -28,10 +29,19 @@ const useRecommendedButton = document.querySelector("#useRecommended");
 const inferenceView = document.querySelector("#inferenceView");
 const configView = document.querySelector("#configView");
 const historyList = document.querySelector("#historyList");
+const serverSetupNotice = document.querySelector("#serverSetupNotice");
+const pilotNameInput = document.querySelector("#pilotName");
+const pilotNameDisplay = document.querySelector("#pilotNameDisplay");
+const musicPanel = document.querySelector("#musicPanel");
+const musicStatus = document.querySelector("#musicStatus");
+const themeAudio = document.querySelector("#themeAudio");
 
 let catalog = null;
 let runtimeConfig = null;
 let memoryHistory = [];
+let musicLibrary = [];
+let activeTrackId = null;
+let activeTrackButton = null;
 
 temperatureInput.addEventListener("input", () => {
   temperatureValue.textContent = temperatureInput.value;
@@ -100,6 +110,141 @@ function getSavedHistory() {
   }
 }
 
+function getSavedPilotName() {
+  try {
+    return localStorage.getItem(PILOT_NAME_KEY) || "Shinji Ikari";
+  } catch {
+    return "Shinji Ikari";
+  }
+}
+
+function savePilotName(name) {
+  localStorage.setItem(PILOT_NAME_KEY, name);
+}
+
+function renderPilotName(name) {
+  const safeName = (name || "Shinji Ikari").trim() || "Shinji Ikari";
+  pilotNameDisplay.textContent = safeName.toUpperCase();
+  pilotNameInput.value = safeName;
+}
+
+function setMusicButtonState(button, isPlaying) {
+  if (!button) {
+    return;
+  }
+  button.classList.toggle("is-playing", isPlaying);
+  button.textContent = isPlaying ? "\u275A\u275A" : "\u25B6";
+  button.setAttribute("aria-pressed", isPlaying ? "true" : "false");
+}
+
+function resetMusicPlaybackState() {
+  setMusicButtonState(activeTrackButton, false);
+  activeTrackId = null;
+  activeTrackButton = null;
+}
+
+function musicTitleClass(title) {
+  if (title === "One Last Kiss") {
+    return "music-title one-last-kiss";
+  }
+  if (title === "Beautiful World") {
+    return "music-title beautiful-world";
+  }
+  if (title === "残酷な天使のテーゼ") {
+    return "music-title cruel-angel";
+  }
+  if (title === "残酷な天使のテーゼ") {
+    return "music-title cruel-angel";
+  }
+  if (title === "残酷な天使のテーゼ") {
+    return "music-title cruel-angel";
+  }
+  return "music-title";
+}
+
+function renderMusicLibrary() {
+  if (!musicLibrary.length) {
+    musicPanel.innerHTML = `<div class="music-empty">No EVA tracks found in the local music directory.</div>`;
+    musicStatus.textContent = "No local theme tracks detected.";
+    return;
+  }
+
+  musicPanel.innerHTML = musicLibrary
+    .map(
+      (track) => `
+        <article class="music-track ${track.available ? "is-playable" : "is-blocked"}">
+          <button
+            type="button"
+            class="music-play-button"
+            data-track-id="${track.id}"
+            ${track.available ? "" : "disabled"}
+            title="${escapeHtml(track.available ? `Play ${track.title}` : track.reason || "Unavailable")}"
+            aria-pressed="false"
+          >
+            ▶
+          </button>
+          <div class="music-copy">
+            <div class="${musicTitleClass(track.title)}">${escapeHtml(track.title)}</div>
+            <div class="music-meta">${escapeHtml(track.artist)}</div>
+            <div class="music-file">${escapeHtml(track.filename)}</div>
+            ${track.reason ? `<div class="music-reason">${escapeHtml(track.reason)}</div>` : ""}
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+
+  musicPanel.querySelectorAll(".music-play-button").forEach((button) => {
+    setMusicButtonState(button, false);
+    button.addEventListener("click", async () => {
+      const track = musicLibrary.find((item) => item.id === button.dataset.trackId);
+      if (!track || !track.available) {
+        return;
+      }
+
+      if (activeTrackButton && activeTrackButton !== button) {
+        setMusicButtonState(activeTrackButton, false);
+      }
+
+      if (activeTrackId === track.id && !themeAudio.paused) {
+        themeAudio.pause();
+        setMusicButtonState(button, false);
+        musicStatus.textContent = `Paused: ${track.title}`;
+        activeTrackId = track.id;
+        activeTrackButton = button;
+        return;
+      }
+
+      const nextSrc = `${window.location.origin}/api/music/track/${track.id}`;
+      if (themeAudio.src !== nextSrc) {
+        themeAudio.src = `/api/music/track/${track.id}`;
+      }
+
+      try {
+        await themeAudio.play();
+        activeTrackId = track.id;
+        activeTrackButton = button;
+        setMusicButtonState(button, true);
+        musicStatus.textContent = `Now playing: ${track.title}`;
+      } catch (error) {
+        resetMusicPlaybackState();
+        musicStatus.textContent = `Playback blocked: ${error.message}`;
+      }
+    });
+  });
+}
+
+themeAudio.addEventListener("ended", () => {
+  resetMusicPlaybackState();
+  musicStatus.textContent = "Playback finished.";
+});
+
+themeAudio.addEventListener("pause", () => {
+  if (!themeAudio.ended && activeTrackButton) {
+    setMusicButtonState(activeTrackButton, false);
+  }
+});
+
 function saveHistory() {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(memoryHistory.slice(0, 20)));
 }
@@ -117,6 +262,7 @@ function defaultSelectionFor(slot) {
     label: "",
     model: "",
     base_url: "",
+    server_ready: false,
   };
 }
 
@@ -134,9 +280,14 @@ function buildSlotForm(slot, config) {
   const current = config.find((item) => item.slot === slot) ?? defaultSelectionFor(slot);
   const providerKey = current.provider_key || "";
   const isCustom = providerKey === "custom";
+  const preset = catalog.presets.find((item) => item.key === providerKey);
+  const isReady = Boolean(preset?.server_ready);
   return `
     <section class="slot-card" data-slot="${slot}">
-      <h3>${SLOT_TITLES[slot]}</h3>
+      <div class="slot-card-head">
+        <h3>${SLOT_TITLES[slot]}</h3>
+        <span class="server-badge ${isReady ? "is-ready" : "is-missing"}">${isReady ? "SERVER READY" : "MISSING SERVER KEY"}</span>
+      </div>
       <div>
         <label for="${slot}-provider">Provider</label>
         <select id="${slot}-provider" data-role="provider">
@@ -172,10 +323,13 @@ function buildSlotForm(slot, config) {
 function buildHintText(providerKey) {
   const preset = catalog.presets.find((item) => item.key === providerKey);
   if (!preset) {
-    return "Choose three providers. Credentials stay on the server and are never sent to the browser.";
+    return "Choose three providers. Real API keys are configured in the server .env file, never in the browser.";
   }
   if (providerKey === "custom") {
     return "Custom mode requires a server-side integration. Public deployment should use preconfigured providers only.";
+  }
+  if (!preset.server_ready) {
+    return `${preset.label} is selected, but its server API key is not loaded yet. Add it to the server .env file, then restart the app.`;
   }
   return `${preset.label} uses server-managed credentials. Endpoint: ${preset.base_url}`;
 }
@@ -196,10 +350,15 @@ function handleProviderChange(event) {
   const urlInput = slotCard.querySelector("[data-role='base_url']");
   const customFields = slotCard.querySelector("[data-role='custom-fields']");
   const hint = slotCard.querySelector("[data-role='hint']");
+  const badge = slotCard.querySelector(".server-badge");
 
   if (preset) {
     modelInput.value = preset.default_model;
     hint.textContent = buildHintText(providerKey);
+    if (badge) {
+      badge.className = `server-badge ${preset.server_ready ? "is-ready" : "is-missing"}`;
+      badge.textContent = preset.server_ready ? "SERVER READY" : "MISSING SERVER KEY";
+    }
   }
 
   if (providerKey === "custom") {
@@ -281,6 +440,28 @@ function renderConfiguredProviders(config) {
     })),
   );
   evaluationMeta.textContent = "Awaiting evaluator output.";
+}
+
+function renderServerSetupNotice() {
+  const configuredProviders = catalog.presets.filter((item) => item.server_ready);
+  const missingProviders = catalog.presets.filter((item) => !item.server_ready && item.key !== "custom");
+
+  if (!missingProviders.length) {
+    serverSetupNotice.innerHTML = `
+      <strong>SERVER API STATUS:</strong>
+      ${configuredProviders.length} provider credentials loaded from server .env.
+    `;
+    serverSetupNotice.className = "server-setup-notice ready";
+    return;
+  }
+
+  const missingLabels = missingProviders.map((item) => item.label).join(", ");
+  serverSetupNotice.innerHTML = `
+    <strong>SERVER API STATUS:</strong>
+    Missing credentials for ${escapeHtml(missingLabels)}.
+    Add them to the server <code>.env</code> file, then restart the app.
+  `;
+  serverSetupNotice.className = "server-setup-notice missing";
 }
 
 function truncate(value, max = 160) {
@@ -455,6 +636,9 @@ configForm.addEventListener("submit", (event) => {
   try {
     const config = collectConfigFromForm();
     validateConfig(config);
+    const pilotName = pilotNameInput.value.trim() || "Shinji Ikari";
+    savePilotName(pilotName);
+    renderPilotName(pilotName);
     saveConfig(config);
     renderConfiguredProviders(config);
     consensusOutput.textContent = "Configuration saved. Credentials remain server-side. Return to the bridge and initiate deliberation.";
@@ -542,12 +726,20 @@ chatForm.addEventListener("submit", async (event) => {
 });
 
 async function bootstrap() {
-  const response = await fetch("/api/catalog");
-  catalog = await response.json();
+  const [catalogResponse, musicResponse] = await Promise.all([
+    fetch("/api/catalog"),
+    fetch("/api/music/library"),
+  ]);
+  catalog = await catalogResponse.json();
+  const musicPayload = await musicResponse.json();
+  musicLibrary = musicPayload.tracks || [];
   const saved = getSavedConfig();
   memoryHistory = getSavedHistory();
+  renderPilotName(getSavedPilotName());
   runtimeConfig = saved;
   buildConfigForm(saved || catalog.recommended);
+  renderServerSetupNotice();
+  renderMusicLibrary();
   renderHistory();
 
   if (saved) {
