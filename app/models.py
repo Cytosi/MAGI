@@ -6,8 +6,9 @@ from pydantic import BaseModel, Field, model_validator
 
 
 DEFAULT_SYSTEM_PROMPT = (
-    "Return final answers only. Do not expose reasoning. "
-    "Respond in Chinese and include conclusion, execution plan, and risks."
+    "You are operating inside NERV's MAGI decision chamber. "
+    "Return only the final MAGI resolution in Chinese, with final verdict, operation order, and risk factors. "
+    "Do not expose hidden reasoning."
 )
 
 
@@ -42,7 +43,7 @@ class ChatRequest(BaseModel):
 
         provider_keys = [provider.provider_key for provider in self.providers]
         if len(set(provider_keys)) != 3:
-            raise ValueError("All three MAGI providers must be unique.")
+            raise ValueError("Melchior, Balthasar, and Casper must use distinct node buses.")
 
         for provider in self.providers:
             if not provider.label.strip():
@@ -163,7 +164,7 @@ class UserConfigUpdateRequest(BaseModel):
 
         provider_keys = [provider.provider_key for provider in self.providers]
         if len(set(provider_keys)) != 3:
-            raise ValueError("All three MAGI providers must be unique.")
+            raise ValueError("Melchior, Balthasar, and Casper must use distinct node buses.")
 
         for provider in self.providers:
             if not provider.label.strip():

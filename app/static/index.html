@@ -22,7 +22,7 @@
           <span class="module-tag">PILOT AUTH</span>
         </div>
         <p class="module-copy">
-          Sign in to load your own MAGI keys, runtime settings, and private deliberation archive.
+          Sign in to restore your pilot credentials, MAGI node links, and classified NERV records.
         </p>
         <div class="auth-tabs">
           <button type="button" id="showLoginButton" class="auth-tab is-active">LOGIN</button>
@@ -125,19 +125,18 @@
             <section class="panel module bridge-panel">
               <div class="module-head">
                 <span class="module-tag">PETITION</span>
-                <button type="button" id="openConfigButton" class="ghost-button">SETTINGS</button>
+                <div class="prompt-actions">
+                  <button type="button" id="openConfigButton" class="ghost-button">SETTINGS</button>
+                  <button type="submit" form="chatForm" id="submitButton">INITIATE DELIBERATION</button>
+                </div>
               </div>
               <form id="chatForm">
-                <label for="prompt">Mission Prompt</label>
+                <label for="prompt">NERV Directive</label>
                 <textarea
                   id="prompt"
                   name="prompt"
-                  placeholder="Example: Design a launch strategy for an AI product, including architecture, safeguards, frontend experience, and rollout phases."
+                  placeholder="Example: Tokyo-3 radar detects an unidentified Angel approaching the GeoFront. Decide whether to launch EVA-01, hold the main barrier, or begin civilian evacuation."
                 ></textarea>
-
-                <div class="action-row">
-                  <button type="submit" id="submitButton">INITIATE DELIBERATION</button>
-                </div>
               </form>
             </section>
 
@@ -148,19 +147,19 @@
                   <button type="button" id="toggleCouncilArchiveButton" class="ghost-button" disabled>
                     OPEN COUNCIL LOG
                   </button>
-                  <div id="evaluationMeta" class="evaluation-meta">Awaiting evaluator output.</div>
+                  <div id="evaluationMeta" class="evaluation-meta">Awaiting MAGI resolution.</div>
                 </div>
               </div>
-              <pre id="consensusOutput">Open the settings deck, configure the MAGI council, and begin deliberation.</pre>
+              <pre id="consensusOutput">Restore pilot authorization, synchronize the three MAGI nodes, and submit a NERV directive.</pre>
             </section>
 
             <section id="councilArchivePanel" class="panel module council-archive-panel hidden">
               <div class="module-head">
                 <span class="module-tag">COUNCIL LOG</span>
-                <div id="councilArchiveStatus" class="evaluation-meta">No deliberation record yet.</div>
+                <div id="councilArchiveStatus" class="evaluation-meta">No classified record yet.</div>
               </div>
               <div id="councilArchiveGrid" class="council-archive-grid">
-                <div class="history-empty">No council replies archived yet.</div>
+                <div class="history-empty">No MAGI node transmissions archived yet.</div>
               </div>
             </section>
 
@@ -170,7 +169,7 @@
                 <button type="button" id="clearHistoryButton" class="ghost-button">CLEAR MEMORY</button>
               </div>
               <div id="historyList" class="history-list">
-                <div class="history-empty">No archived deliberations yet.</div>
+                <div class="history-empty">No classified NERV decisions archived yet.</div>
               </div>
             </section>
           </section>
@@ -191,23 +190,23 @@
             </div>
 
             <p class="module-copy">
-              Each user stores a separate MAGI council on the server. Configure three distinct
-              providers, save your own API keys, and your account will keep its own history.
+              Each pilot profile maintains a separate MAGI council. Assign three independent
+              node buses, seal the access keys, and preserve the command record under that pilot.
             </p>
 
             <div id="serverSetupNotice" class="server-setup-notice">
-              Checking server credential status...
+              Scanning MAGI credential seals...
             </div>
 
             <form id="configForm" class="config-form"></form>
 
             <div class="action-row">
-              <button type="button" class="ghost-button" id="useRecommended">LOAD RECOMMENDED SETUP</button>
-              <button type="button" class="ghost-button" id="validateProvidersButton">TEST CONNECTIVITY</button>
-              <button type="submit" form="configForm" id="saveConfigButton">SAVE CONFIGURATION</button>
+              <button type="button" class="ghost-button" id="useRecommended">LOAD NERV PRESET</button>
+              <button type="button" class="ghost-button" id="validateProvidersButton">SYNC MAGI LINKS</button>
+              <button type="submit" form="configForm" id="saveConfigButton">SEAL CONFIGURATION</button>
             </div>
             <div id="configValidationStatus" class="config-validation-status pending">
-              Connectivity validation pending.
+              MAGI synchronization pending.
             </div>
           </section>
 
@@ -221,14 +220,14 @@
                 <article class="tuning-block">
                   <label>Current Pilot</label>
                   <div id="configUserLabel" class="identity-chip">ANONYMOUS</div>
-                  <div id="accountStatus" class="auth-status">Sign in to edit your server-side MAGI council.</div>
+                  <div id="accountStatus" class="auth-status">Authenticate to access your pilot-side MAGI council.</div>
                 </article>
                 <article class="tuning-block">
-                  <label for="systemPrompt">System Directive</label>
+                  <label for="systemPrompt">Command Protocol</label>
                   <textarea
                     id="systemPrompt"
                     name="systemPrompt"
-                  >Return final answers only. Do not expose reasoning. Respond in Chinese and include conclusion, execution plan, and risks.</textarea>
+                  >You are operating inside NERV's MAGI decision chamber. Return only the final MAGI resolution in Chinese, with final verdict, operation order, and risk factors. Do not expose hidden reasoning.</textarea>
                 </article>
                 <article class="tuning-block">
                   <label for="temperature">Temperature <span id="temperatureValue">0.4</span></label>
@@ -246,12 +245,12 @@
                 <span class="module-tag">CONFIG NOTES</span>
               </div>
               <div class="notes">
-                <p>All MAGI nodes must use unique providers.</p>
-                <p>Each user account stores its own provider keys on the server.</p>
-                <p>Qwen, DeepSeek, and Doubao use OpenAI-compatible chat endpoints.</p>
-                <p>Saved keys are never returned to the browser. Only storage state is shown.</p>
-                <p>Custom mode requires a compatible `chat/completions` endpoint.</p>
-                <p>Your private history archive is also stored server-side and loaded at login.</p>
+                <p>Melchior, Balthasar, and Casper must each route through a distinct node bus.</p>
+                <p>Each pilot profile stores its own sealed access keys.</p>
+                <p>Qwen, DeepSeek, and Doubao operate as MAGI-compatible external cores.</p>
+                <p>Sealed keys are never returned to the browser. Only lock state is displayed.</p>
+                <p>Custom mode requires a compatible `chat/completions` command interface.</p>
+                <p>Classified command history is restored after pilot authentication.</p>
               </div>
             </section>
           </section>

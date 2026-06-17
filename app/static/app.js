@@ -66,8 +66,8 @@ let activeTrackButton = null;
 
 function renderBirthdayNotice() {
   const today = new Date();
-  const isCherryBirthday = today.getMonth() === 5 && today.getDate() === 18;
-  if (!isCherryBirthday || document.querySelector("#cherryBirthdayNotice")) {
+  const isCherryBirthdayWindow = today.getMonth() === 5 && [17, 18].includes(today.getDate());
+  if (!isCherryBirthdayWindow || document.querySelector("#cherryBirthdayNotice")) {
     return;
   }
 
@@ -75,7 +75,7 @@ function renderBirthdayNotice() {
   notice.id = "cherryBirthdayNotice";
   notice.className = "birthday-notice";
   notice.setAttribute("aria-label", "Birthday notice");
-  notice.textContent = "Happy birthday, Cherry!";
+  notice.textContent = "Happy birthday, Cherry🥰";
   document.body.appendChild(notice);
 }
 
@@ -162,8 +162,8 @@ function setAuthMode(mode) {
   authSubmitButton.textContent = mode === "login" ? "LOGIN" : "REGISTER";
   authStatus.textContent =
     mode === "login"
-      ? "Sign in to restore your server-side MAGI profile."
-      : "Create a new pilot account.";
+      ? "Authenticate to restore your NERV pilot profile."
+      : "Register a new pilot clearance.";
 }
 
 showLoginButton.addEventListener("click", () => setAuthMode("login"));
@@ -178,8 +178,8 @@ function setUserIdentity(username) {
   pilotNameDisplay.textContent = display;
   pilotStatusDisplay.textContent = currentUsername ? "ENTRY PLUG LINKED" : "ENTRY PLUG STANDBY";
   accountStatus.textContent = currentUsername
-    ? `Authenticated as ${currentUsername}. Your MAGI keys and memory archive are isolated per account.`
-    : "Sign in to edit your server-side MAGI council.";
+    ? `Pilot ${currentUsername} authenticated. MAGI keys and command records are isolated under this profile.`
+    : "Authenticate to access your pilot-side MAGI council.";
   if (!currentUsername || (previousUsername && previousUsername !== currentUsername)) {
     clearCouncilArchive();
   }
@@ -313,15 +313,15 @@ function applyRuntimeSettings(settings) {
 function buildHintText(providerKey) {
   const preset = catalog.presets.find((item) => item.key === providerKey);
   if (!preset) {
-    return "Choose three providers. This account will store its own API keys on the server.";
+    return "Assign three independent node buses. This pilot profile will store its own sealed access keys.";
   }
   if (providerKey === "custom") {
-    return "Custom mode requires an OpenAI-compatible chat/completions endpoint and its own API key.";
+    return "Custom mode requires a MAGI-compatible chat/completions command interface and its own access key.";
   }
   if (!preset.server_ready) {
-    return `${preset.label} is not preloaded from the server environment. Save your own API key for this account.`;
+    return `${preset.label} is not sealed in the central NERV environment. Store a pilot-specific access key.`;
   }
-  return `${preset.label} can use either the server fallback credential or your account-specific key.`;
+  return `${preset.label} can use either the central NERV fallback key or this pilot's sealed key.`;
 }
 
 function buildDocsLink(providerKey) {
@@ -332,7 +332,7 @@ function buildDocsLink(providerKey) {
 
   return `
     <a class="provider-doc-link" href="${escapeHtml(preset.docs_url)}" target="_blank" rel="noreferrer">
-      OPEN API SETUP GUIDE
+      OPEN NODE SETUP GUIDE
     </a>
   `;
 }
@@ -358,9 +358,9 @@ function buildSlotForm(slot, config) {
         <span class="server-badge ${ready ? "is-ready" : "is-missing"}">${ready ? "KEY STORED" : "NO KEY"}</span>
       </div>
       <div>
-        <label for="${slot}-provider">Provider</label>
+        <label for="${slot}-provider">Node Bus</label>
         <select id="${slot}-provider" data-role="provider">
-          <option value="">Select a provider</option>
+          <option value="">Select node bus</option>
           ${catalog.presets
             .map(
               (item) => `
@@ -383,13 +383,13 @@ function buildSlotForm(slot, config) {
         <input id="${slot}-url" data-role="base_url" type="text" value="${escapeHtml(current.base_url || "")}" />
       </div>
       <div>
-        <label for="${slot}-api-key">API Key</label>
+        <label for="${slot}-api-key">Access Key</label>
         <input
           id="${slot}-api-key"
           data-role="api_key"
           type="password"
           value=""
-          placeholder="${ready ? "Leave blank to keep the saved key" : "Enter API key"}"
+          placeholder="${ready ? "Leave blank to keep sealed key" : "Enter access key"}"
         />
       </div>
       <div class="provider-doc-shell" data-role="docs-link">${buildDocsLink(providerKey)}</div>
@@ -476,10 +476,10 @@ function collectConfigFromForm() {
 function validateConfig(config) {
   const providerKeys = config.map((item) => item.provider_key);
   if (providerKeys.some((key) => !key)) {
-    throw new Error("Select a provider for all three MAGI nodes.");
+    throw new Error("Select a node bus for all three MAGI nodes.");
   }
   if (new Set(providerKeys).size !== 3) {
-    throw new Error("All three MAGI providers must be unique.");
+    throw new Error("Melchior, Balthasar, and Casper must use distinct node buses.");
   }
   for (const item of config) {
     if (!item.label || !item.model || !item.base_url) {
@@ -505,8 +505,8 @@ function renderConfiguredProviders(config) {
       provider_key: provider.provider_key,
       status: provider.server_ready ? "ready" : "missing_config",
       content: provider.server_ready
-        ? "User profile loaded. Awaiting deliberation."
-        : "No saved API key for this user and node. Open settings and store one.",
+        ? "Pilot profile linked. Awaiting NERV directive."
+        : "No sealed access key for this pilot and node. Open settings and store one.",
       model: provider.model,
       base_url: provider.base_url,
       latency_ms: 0,
@@ -514,31 +514,31 @@ function renderConfiguredProviders(config) {
     })),
   );
   renderCouncilArchive();
-  evaluationMeta.textContent = "Awaiting evaluator output.";
+  evaluationMeta.textContent = "Awaiting MAGI resolution.";
   if (!currentUsername) {
-    setValidationStatus("Sign in to validate and save your own MAGI provider keys.", "pending");
+    setValidationStatus("Authenticate to seal and synchronize your MAGI node keys.", "pending");
     return;
   }
   if (allProvidersReady(runtimeConfig)) {
-    setValidationStatus("All three MAGI nodes are validated and ready for deliberation.", "success");
+    setValidationStatus("All three MAGI nodes are synchronized and ready for command judgment.", "success");
   } else {
-    setValidationStatus("Three valid provider keys are required before the bridge can unlock.", "error");
+    setValidationStatus("Three sealed node keys are required before the command bridge can unlock.", "error");
   }
 }
 
 function renderServerSetupNotice() {
   const available = runtimeConfig.filter((item) => item.server_ready).map((item) => item.label);
   if (!currentUsername) {
-    serverSetupNotice.innerHTML = "<strong>ACCOUNT STATUS:</strong> Sign in to access your personal MAGI configuration.";
+    serverSetupNotice.innerHTML = "<strong>PILOT STATUS:</strong> Authenticate to access your classified MAGI configuration.";
     serverSetupNotice.className = "server-setup-notice missing";
     return;
   }
   if (!available.length) {
-    serverSetupNotice.innerHTML = `<strong>ACCOUNT STATUS:</strong> ${escapeHtml(currentUsername)} has no active API key stored yet.`;
+    serverSetupNotice.innerHTML = `<strong>PILOT STATUS:</strong> ${escapeHtml(currentUsername)} has no sealed MAGI access key yet.`;
     serverSetupNotice.className = "server-setup-notice missing";
     return;
   }
-  serverSetupNotice.innerHTML = `<strong>ACCOUNT STATUS:</strong> ${escapeHtml(currentUsername)} has active keys for ${escapeHtml(available.join(", "))}.`;
+  serverSetupNotice.innerHTML = `<strong>PILOT STATUS:</strong> ${escapeHtml(currentUsername)} has sealed keys for ${escapeHtml(available.join(", "))}.`;
   serverSetupNotice.className = "server-setup-notice ready";
 }
 
@@ -549,7 +549,7 @@ function setValidationStatus(message, tone = "pending") {
 
 function renderHistory() {
   if (!memoryHistory.length) {
-    historyList.innerHTML = `<div class="history-empty">No archived deliberations yet.</div>`;
+    historyList.innerHTML = `<div class="history-empty">No classified NERV decisions archived yet.</div>`;
     return;
   }
 
@@ -631,14 +631,14 @@ function getNodeLore(member) {
   if (member.status === "error") {
     return {
       title: "LINK FAILURE",
-      copy: "The node rejected the current bridge request. Inspect the endpoint, credential scope, or provider access state.",
+      copy: "The node rejected the current command bridge request. Inspect the endpoint, access scope, or bus state.",
     };
   }
 
   if (member.status === "missing_config") {
     return {
       title: "KEY REQUIRED",
-      copy: "This node cannot join deliberation until a valid API credential is stored and validated for the current pilot.",
+      copy: "This node cannot join the MAGI chamber until a valid access key is sealed for the current pilot.",
     };
   }
 
@@ -658,7 +658,7 @@ function renderNodeCard(member) {
     member.status === "syncing"
       ? `
         <div class="loading-copy">
-          <div class="provider-meta">Provider Bus: ${providerLabel}</div>
+          <div class="provider-meta">Node Bus: ${providerLabel}</div>
           <div class="provider-meta">Model Core: ${escapeHtml(modelLabel)}</div>
           <div class="provider-meta">Sync State: LIVE HANDSHAKE</div>
           <div class="loading-line"></div>
@@ -670,7 +670,7 @@ function renderNodeCard(member) {
         ? `
         <div class="node-stat-grid">
           <div class="node-stat">
-            <span>Provider Bus</span>
+            <span>Node Bus</span>
             <strong>${providerLabel}</strong>
           </div>
           <div class="node-stat">
@@ -687,7 +687,7 @@ function renderNodeCard(member) {
         </div>
         <div class="node-stat-grid">
           <div class="node-stat">
-            <span>Provider Bus</span>
+            <span>Node Bus</span>
             <strong>${providerLabel}</strong>
           </div>
           <div class="node-stat">
@@ -736,7 +736,7 @@ function renderCouncil(council, evaluation) {
   renderCouncilArchive();
   evaluationMeta.textContent = evaluation
     ? `${evaluation.name} | ${evaluation.status.toUpperCase()} | ${evaluation.model}`
-    : "Awaiting evaluator output.";
+    : "Awaiting MAGI resolution.";
 }
 
 function setCouncilArchiveOpen(isOpen) {
@@ -753,13 +753,13 @@ function renderCouncilArchive() {
   toggleCouncilArchiveButton.disabled = sortedReplies.length === 0;
 
   if (!sortedReplies.length) {
-    councilArchiveStatus.textContent = "No deliberation record yet.";
-    councilArchiveGrid.innerHTML = `<div class="history-empty">No council replies archived yet.</div>`;
+    councilArchiveStatus.textContent = "No classified record yet.";
+    councilArchiveGrid.innerHTML = `<div class="history-empty">No MAGI node transmissions archived yet.</div>`;
     setCouncilArchiveOpen(false);
     return;
   }
 
-  councilArchiveStatus.textContent = `${sortedReplies.length}/3 council records available`;
+  councilArchiveStatus.textContent = `${sortedReplies.length}/3 MAGI transmissions archived`;
   councilArchiveGrid.innerHTML = sortedReplies
     .map((reply) => {
       const slotTitle = SLOT_TITLES[reply.code] || reply.code.toUpperCase();
@@ -796,7 +796,7 @@ async function apiFetch(path, options = {}) {
     clearToken();
     setUserIdentity("");
     showAuthGate(true);
-    authStatus.textContent = "Session expired. Please sign in again.";
+    authStatus.textContent = "Pilot session expired. Re-authentication required.";
     systemStatus.textContent = "AUTH REQUIRED";
   }
   return response;
@@ -835,14 +835,14 @@ async function runConnectivityValidation(providers, { updateUi = true } = {}) {
   if (updateUi) {
     renderNodeSlots(testData.results);
     if (testData.ready_count === 3) {
-      setValidationStatus("ALL THREE MAGI NODES PASSED CONNECTIVITY VALIDATION.", "success");
-      evaluationMeta.textContent = "Connectivity validation complete: 3/3 ready";
-      consensusOutput.textContent = "Connectivity check complete. All three MAGI nodes are online and ready.";
-      systemStatus.textContent = "VALIDATION READY";
+      setValidationStatus("ALL THREE MAGI NODES PASSED LINK SYNCHRONIZATION.", "success");
+      evaluationMeta.textContent = "MAGI synchronization complete: 3/3 ready";
+      consensusOutput.textContent = "Synchronization complete. Melchior, Balthasar, and Casper are online.";
+      systemStatus.textContent = "SYNC READY";
     } else {
-      setValidationStatus(`CONNECTIVITY CHECK FAILED: ${testData.ready_count}/3 READY.`, "error");
-      evaluationMeta.textContent = `Connectivity check failed: ${testData.ready_count}/3 ready`;
-      consensusOutput.textContent = "One or more MAGI nodes failed connectivity validation. Fix the provider credentials and test again.";
+      setValidationStatus(`MAGI LINK SYNCHRONIZATION FAILED: ${testData.ready_count}/3 READY.`, "error");
+      evaluationMeta.textContent = `MAGI synchronization failed: ${testData.ready_count}/3 ready`;
+      consensusOutput.textContent = "One or more MAGI nodes failed link synchronization. Inspect access keys and node bus settings.";
       systemStatus.textContent = "CONFIG FAULT";
     }
   }
@@ -856,12 +856,12 @@ async function submitAuth(event) {
   const password = authPasswordInput.value;
 
   if (!username || !password) {
-    authStatus.textContent = "Enter both username and password.";
+    authStatus.textContent = "Enter pilot ID and passcode.";
     return;
   }
 
   authSubmitButton.disabled = true;
-  authSubmitButton.textContent = authMode === "login" ? "LOGGING IN..." : "REGISTERING...";
+  authSubmitButton.textContent = authMode === "login" ? "AUTHENTICATING..." : "REGISTERING...";
 
   try {
     const response = await fetch(authMode === "login" ? "/api/auth/login" : "/api/auth/register", {
@@ -876,21 +876,21 @@ async function submitAuth(event) {
     const data = await response.json();
     saveToken(data.token);
     authPasswordInput.value = "";
-    authStatus.textContent = `${authMode === "login" ? "Login" : "Registration"} successful. Loading your MAGI profile...`;
+    authStatus.textContent = `${authMode === "login" ? "Authentication" : "Registration"} complete. Loading pilot MAGI profile...`;
     await loadUserBundle();
     if (!allProvidersReady(runtimeConfig)) {
-      consensusOutput.textContent = `Welcome, ${data.username}. Before entering the bridge, configure three valid provider keys and pass connectivity checks.`;
+      consensusOutput.textContent = `Welcome, ${data.username}. Before entering the command bridge, seal three valid node keys and synchronize MAGI links.`;
       systemStatus.textContent = "CONFIG REQUIRED";
       switchView("config");
     } else {
-      consensusOutput.textContent = `Welcome back, ${data.username}. Your personal MAGI profile is online.`;
+      consensusOutput.textContent = `Welcome back, ${data.username}. Your pilot MAGI profile is online.`;
       systemStatus.textContent = "STANDBY";
       switchView("inference");
     }
   } catch (error) {
     clearToken();
     setUserIdentity("");
-    authStatus.textContent = `Authentication failed: ${error.message}`;
+    authStatus.textContent = `Pilot authentication failed: ${error.message}`;
     showAuthGate(true);
   } finally {
     authSubmitButton.disabled = false;
@@ -903,7 +903,7 @@ authForm.addEventListener("submit", submitAuth);
 configForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!userToken) {
-    consensusOutput.textContent = "Sign in before saving your MAGI configuration.";
+    consensusOutput.textContent = "Authenticate before sealing the MAGI configuration.";
     showAuthGate(true);
     return;
   }
@@ -920,7 +920,7 @@ configForm.addEventListener("submit", async (event) => {
       },
     };
 
-    setValidationStatus("Running provider connectivity checks before save...", "pending");
+    setValidationStatus("Synchronizing MAGI node links before sealing configuration...", "pending");
     const testData = await runConnectivityValidation(providers, { updateUi: true });
     if (testData.ready_count !== 3) {
       switchView("config");
@@ -943,12 +943,12 @@ configForm.addEventListener("submit", async (event) => {
     renderConfiguredProviders(data.providers);
     renderHistory();
     renderServerSetupNotice();
-    setValidationStatus("Configuration saved. All three MAGI nodes are validated for this account.", "success");
-    consensusOutput.textContent = `Configuration saved for ${data.username}. All three nodes passed validation and the bridge is now unlocked.`;
-    systemStatus.textContent = "CONFIG SAVED";
+    setValidationStatus("Configuration sealed. All three MAGI nodes are synchronized for this pilot.", "success");
+    consensusOutput.textContent = `Configuration sealed for ${data.username}. All three nodes passed synchronization and the command bridge is unlocked.`;
+    systemStatus.textContent = "CONFIG SEALED";
     switchView("inference");
   } catch (error) {
-    consensusOutput.textContent = `Configuration save failed: ${error.message}`;
+    consensusOutput.textContent = `Configuration sealing failed: ${error.message}`;
     systemStatus.textContent = "CONFIG FAULT";
     switchView("config");
   }
@@ -961,7 +961,7 @@ useRecommendedButton.addEventListener("click", () => {
     has_api_key: item.server_ready,
   }));
   buildConfigForm(recommended);
-  setValidationStatus("Recommended provider preset loaded. Run connectivity validation before saving.", "pending");
+  setValidationStatus("NERV node preset loaded. Synchronize MAGI links before sealing.", "pending");
 });
 
 toggleCouncilArchiveButton.addEventListener("click", () => {
@@ -971,7 +971,7 @@ toggleCouncilArchiveButton.addEventListener("click", () => {
 
 validateProvidersButton.addEventListener("click", async () => {
   if (!userToken) {
-    consensusOutput.textContent = "Sign in before validating your MAGI provider keys.";
+    consensusOutput.textContent = "Authenticate before synchronizing MAGI node keys.";
     showAuthGate(true);
     return;
   }
@@ -980,16 +980,16 @@ validateProvidersButton.addEventListener("click", async () => {
     const providers = collectConfigFromForm();
     validateConfig(providers);
     validateProvidersButton.disabled = true;
-    validateProvidersButton.textContent = "TESTING...";
-    setValidationStatus("Running provider connectivity checks...", "pending");
+    validateProvidersButton.textContent = "SYNCING...";
+    setValidationStatus("Synchronizing MAGI node links...", "pending");
     await runConnectivityValidation(providers, { updateUi: true });
   } catch (error) {
-    setValidationStatus(`VALIDATION FAILED: ${error.message}`, "error");
-    consensusOutput.textContent = `Connectivity validation failed: ${error.message}`;
+    setValidationStatus(`MAGI SYNCHRONIZATION FAILED: ${error.message}`, "error");
+    consensusOutput.textContent = `MAGI link synchronization failed: ${error.message}`;
     systemStatus.textContent = "CONFIG FAULT";
   } finally {
     validateProvidersButton.disabled = false;
-    validateProvidersButton.textContent = "TEST CONNECTIVITY";
+    validateProvidersButton.textContent = "SYNC MAGI LINKS";
   }
 });
 
@@ -1006,9 +1006,9 @@ clearHistoryButton.addEventListener("click", async () => {
     }
     memoryHistory = [];
     renderHistory();
-    consensusOutput.textContent = "Server-side memory archive cleared for this user.";
+    consensusOutput.textContent = "Classified command archive cleared for this pilot.";
   } catch (error) {
-    consensusOutput.textContent = `Clear history failed: ${error.message}`;
+    consensusOutput.textContent = `Archive purge failed: ${error.message}`;
   }
 });
 
@@ -1017,32 +1017,32 @@ chatForm.addEventListener("submit", async (event) => {
   const prompt = document.querySelector("#prompt").value.trim();
 
   if (!userToken) {
-    consensusOutput.textContent = "Sign in before starting deliberation.";
+    consensusOutput.textContent = "Authenticate before submitting a NERV directive.";
     showAuthGate(true);
     return;
   }
   if (!allProvidersReady(runtimeConfig)) {
-    consensusOutput.textContent = "You must configure and validate all three provider APIs before entering deliberation.";
+    consensusOutput.textContent = "Seal and synchronize all three MAGI node buses before entering command judgment.";
     systemStatus.textContent = "CONFIG REQUIRED";
     switchView("config");
     return;
   }
   if (!runtimeConfig.length) {
-    consensusOutput.textContent = "Open the settings deck and configure all three MAGI nodes first.";
+    consensusOutput.textContent = "Open the settings deck and assign all three MAGI nodes first.";
     switchView("config");
     return;
   }
   if (!prompt) {
-    consensusOutput.textContent = "Enter a mission prompt before starting deliberation.";
+    consensusOutput.textContent = "Enter a NERV directive before initiating MAGI judgment.";
     return;
   }
 
   submitButton.disabled = true;
-  submitButton.textContent = "DELIBERATING...";
-  consensusOutput.textContent = "MAGI is processing the council response and the evaluator is composing the final verdict.";
+  submitButton.textContent = "JUDGING...";
+  consensusOutput.textContent = "MAGI is synchronizing Melchior, Balthasar, and Casper before issuing a final resolution.";
   systemStatus.textContent = "SYNCING";
   renderNodeSlots(createSyncingMembers());
-  evaluationMeta.textContent = "Evaluator synchronizing...";
+  evaluationMeta.textContent = "MAGI evaluator synchronizing...";
 
   try {
     const response = await apiFetch("/api/deliberate", {
@@ -1067,7 +1067,7 @@ chatForm.addEventListener("submit", async (event) => {
     systemStatus.textContent = "DECISION READY";
     switchView("inference");
   } catch (error) {
-    consensusOutput.textContent = `Deliberation failed: ${error.message}`;
+    consensusOutput.textContent = `MAGI judgment failed: ${error.message}`;
     systemStatus.textContent = "FAULT";
   } finally {
     submitButton.disabled = false;
@@ -1107,7 +1107,7 @@ async function bootstrap() {
   renderHistory();
   renderCouncilArchive();
   renderServerSetupNotice();
-  setValidationStatus("Sign in to validate and save your own MAGI provider keys.", "pending");
+  setValidationStatus("Authenticate to seal and synchronize your MAGI node keys.", "pending");
   setAuthMode("login");
   setUserIdentity("");
   switchView("inference");
@@ -1117,12 +1117,12 @@ async function bootstrap() {
     try {
       await loadUserBundle();
       if (!allProvidersReady(runtimeConfig)) {
-        consensusOutput.textContent = `Personal MAGI profile restored for ${currentUsername}, but the bridge remains locked until three valid APIs are configured.`;
+        consensusOutput.textContent = `Pilot MAGI profile restored for ${currentUsername}, but the bridge remains locked until three valid node buses are sealed.`;
         systemStatus.textContent = "CONFIG REQUIRED";
         switchView("config");
         return;
       }
-      consensusOutput.textContent = `Personal MAGI profile restored for ${currentUsername}.`;
+      consensusOutput.textContent = `Pilot MAGI profile restored for ${currentUsername}.`;
       systemStatus.textContent = "STANDBY";
       return;
     } catch {
@@ -1131,7 +1131,7 @@ async function bootstrap() {
   }
 
   showAuthGate(true);
-  consensusOutput.textContent = "Authenticate to load your personal MAGI council and history.";
+  consensusOutput.textContent = "Authenticate to load your pilot MAGI council and classified command archive.";
   systemStatus.textContent = "AUTH REQUIRED";
 }
 

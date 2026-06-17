@@ -2861,6 +2861,12 @@ button {
     overflow: hidden;
   }
 
+  .support-right {
+    width: 224px;
+    min-height: 186px;
+    padding: 10px 12px 12px;
+  }
+
   .support-panel {
     margin-top: 8px;
   }
@@ -2874,8 +2880,40 @@ button {
   }
 
   .music-panel {
-    max-height: 118px;
-    overflow: auto;
+    max-height: none;
+    overflow: hidden;
+    gap: 4px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .music-panel::-webkit-scrollbar {
+    display: none;
+  }
+
+  .support-right .music-track {
+    gap: 6px;
+    padding: 4px 0;
+  }
+
+  .support-right .music-play-button {
+    min-height: 24px;
+    min-width: 24px;
+  }
+
+  .support-right .music-title {
+    font-size: 10px;
+    line-height: 1.05;
+  }
+
+  .support-right .music-meta {
+    font-size: 7px;
+    line-height: 1.2;
+  }
+
+  .support-right .music-status {
+    margin-top: 5px;
+    line-height: 1.2;
   }
 
   .center-top span {
@@ -3029,5 +3067,363 @@ button {
   .right-node .provider-card-shell {
     width: 214px;
     min-height: 190px;
+  }
+}
+
+/* Final command order: directive first, then the three MAGI nodes enclosing the resolution. */
+@media (min-width: 981px) {
+  .magi-stage {
+    grid-template-columns:
+      minmax(190px, 230px)
+      minmax(280px, 350px)
+      minmax(430px, 540px)
+      minmax(280px, 350px)
+      minmax(190px, 230px);
+    grid-template-rows:
+      minmax(132px, auto)
+      54px
+      246px
+      58px
+      280px;
+    grid-template-areas:
+      "supportL prompt prompt prompt supportR"
+      ". . centerTop . ."
+      ". . top . ."
+      "cityL left magi right cityR"
+      ". left verdict right .";
+    gap: 10px 46px;
+    padding: 8px 0 20px;
+    align-items: start;
+  }
+
+  .center-stage {
+    display: contents;
+  }
+
+  .bridge-panel {
+    grid-area: prompt;
+    align-self: stretch;
+    min-height: 132px;
+    padding: 12px 16px;
+  }
+
+  .bridge-panel .module-head {
+    margin-bottom: 8px;
+  }
+
+  .prompt-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+  }
+
+  .prompt-actions button {
+    min-height: 36px;
+    padding: 8px 12px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .bridge-panel form {
+    display: grid;
+    gap: 8px;
+  }
+
+  .bridge-panel form label {
+    line-height: 1;
+  }
+
+  .bridge-panel textarea {
+    min-height: 58px;
+    max-height: 66px;
+    line-height: 1.35;
+  }
+
+  .bridge-panel .action-row {
+    grid-area: action;
+    margin-top: 0;
+    justify-content: flex-end;
+  }
+
+  .bridge-panel .action-row button {
+    min-height: 36px;
+    padding: 8px 12px;
+    font-size: 11px;
+  }
+
+  .center-label {
+    grid-area: magi;
+    justify-self: center;
+    align-self: center;
+    width: 112px;
+    min-height: 40px;
+    margin: 0;
+    font-size: 20px;
+  }
+
+  .verdict-panel {
+    grid-area: verdict;
+    align-self: start;
+    min-height: 238px;
+    padding: 14px 16px;
+  }
+
+  .verdict-panel pre {
+    min-height: 128px;
+    max-height: 142px;
+    font-size: 13px;
+    line-height: 1.52;
+  }
+
+  .top-node {
+    align-self: stretch;
+    height: 246px;
+  }
+
+  .top-node .provider-card {
+    min-height: 202px;
+    height: 202px;
+    overflow: hidden;
+  }
+
+  .top-node .node-slot .provider-card-header {
+    min-height: 48px;
+    padding: 10px 14px;
+  }
+
+  .top-node .node-slot .provider-card-body {
+    min-height: 134px;
+    padding: 8px 14px 10px;
+    overflow: hidden;
+  }
+
+  .top-node .node-lore-block {
+    gap: 5px;
+  }
+
+  .top-node .node-lore-copy {
+    line-height: 1.25;
+  }
+
+  .top-node .node-stat-grid {
+    gap: 6px;
+  }
+
+  .top-node .node-stat {
+    min-height: 46px;
+    padding: 7px 9px;
+  }
+
+  .top-node .node-answer-body {
+    max-height: 62px;
+  }
+
+  .left-node,
+  .right-node {
+    align-self: center;
+    width: 100%;
+    height: 340px;
+    margin-top: -26px;
+  }
+
+  .left-node {
+    justify-self: start;
+  }
+
+  .right-node {
+    justify-self: end;
+  }
+
+  .left-node .node-slot,
+  .right-node .node-slot {
+    inset: 40px 0 0;
+    height: 300px;
+  }
+
+  .left-node .provider-card,
+  .right-node .provider-card {
+    width: 292px;
+    min-height: 292px;
+    height: 292px;
+  }
+
+  .left-node .provider-card-shell,
+  .right-node .provider-card-shell {
+    width: 226px;
+    min-height: 198px;
+  }
+
+  .left-node .provider-card-body,
+  .right-node .provider-card-body {
+    min-height: 122px;
+    padding: 9px 9px 0;
+  }
+
+  .left-node .node-answer-body,
+  .right-node .node-answer-body {
+    max-height: 54px;
+    font-size: 9px;
+    line-height: 1.35;
+  }
+
+  .support-left,
+  .support-right {
+    position: relative;
+    inset: auto;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    z-index: 4;
+    width: 100%;
+    align-self: stretch;
+    min-height: 132px;
+    padding: 10px 12px;
+  }
+
+  .support-left {
+    grid-area: supportL;
+  }
+
+  .support-right {
+    grid-area: supportR;
+    min-height: 132px;
+  }
+
+  .city-left,
+  .city-right {
+    align-self: end;
+    margin-bottom: 18px;
+  }
+
+  .left-node .node-banner {
+    position: absolute;
+    top: 0;
+    left: -18px;
+    right: auto;
+    margin: 0;
+    text-align: left;
+    transform: none;
+  }
+
+  .right-node .node-banner {
+    position: absolute;
+    top: 14px;
+    left: auto;
+    right: -78px;
+    margin: 0;
+    text-align: right;
+    transform: none;
+  }
+}
+
+@media (min-width: 981px) and (max-width: 1380px) {
+  .magi-stage {
+    grid-template-columns:
+      minmax(255px, 1fr)
+      minmax(360px, 500px)
+      minmax(255px, 1fr);
+    grid-template-rows:
+      minmax(132px, auto)
+      46px
+      230px
+      54px
+      258px;
+    grid-template-areas:
+      "prompt prompt prompt"
+      ". centerTop ."
+      ". top ."
+      "left magi right"
+      "left verdict right";
+    gap: 9px 38px;
+  }
+
+  .support-left,
+  .support-right,
+  .city-left,
+  .city-right {
+    display: none;
+  }
+
+  .bridge-panel {
+    min-height: 132px;
+  }
+
+  .top-node {
+    height: 230px;
+  }
+
+  .top-node .provider-card {
+    min-height: 188px;
+    height: 188px;
+  }
+
+  .top-node .node-slot .provider-card-body {
+    min-height: 124px;
+    padding: 8px 13px 9px;
+  }
+
+  .left-node,
+  .right-node {
+    height: 308px;
+    margin-top: -20px;
+  }
+
+  .left-node {
+    justify-self: start;
+  }
+
+  .right-node {
+    justify-self: end;
+  }
+
+  .left-node .node-slot,
+  .right-node .node-slot {
+    height: 268px;
+  }
+
+  .left-node .provider-card,
+  .right-node .provider-card {
+    width: 256px;
+    min-height: 256px;
+    height: 256px;
+  }
+
+  .left-node .provider-card-shell,
+  .right-node .provider-card-shell {
+    width: 202px;
+    min-height: 174px;
+  }
+
+  .verdict-panel {
+    min-height: 238px;
+  }
+
+  .verdict-panel pre {
+    min-height: 116px;
+    max-height: 128px;
+  }
+
+  .left-node .node-banner {
+    position: absolute;
+    top: 0;
+    left: -12px;
+    right: auto;
+    margin: 0;
+    text-align: left;
+    transform: none;
+  }
+
+  .right-node .node-banner {
+    position: absolute;
+    top: 12px;
+    left: auto;
+    right: -56px;
+    margin: 0;
+    text-align: right;
+    transform: none;
   }
 }

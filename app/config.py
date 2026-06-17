@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-DEFAULT_DOUBAO_MODEL = "doubao-seed-2-0-lite-260215"
+DEFAULT_DOUBAO_MODEL = "doubao-seed-1-8-251228"
 DEFAULT_PILOT_NAME = "Shinji Ikari"
 DEFAULT_ADMIN_SESSION_HOURS = 12
 LEGACY_DOUBAO_MODELS = {
