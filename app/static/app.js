@@ -1,15 +1,24 @@
-const STORAGE_KEY = "eva-magi-runtime-config";
-const HISTORY_KEY = "eva-magi-history";
-const PILOT_NAME_KEY = "eva-magi-pilot-name";
+const USER_TOKEN_KEY = "eva-magi-user-token";
 const SLOT_ORDER = ["melchior", "balthasar", "casper"];
 const SLOT_TITLES = {
   melchior: "MELCHIOR",
   balthasar: "BALTHASAR",
   casper: "CASPER",
 };
-const DEFAULT_DOUBAO_MODEL = "doubao-seed-2-0-lite-260215";
-const LEGACY_DOUBAO_MODELS = new Set(["doubao-seed-1-6-thinking-250715"]);
+const CRUEL_ANGELS_TITLE = "残酷な天使のテーゼ";
 
+const authGate = document.querySelector("#authGate");
+const authForm = document.querySelector("#authForm");
+const authUsernameInput = document.querySelector("#authUsername");
+const authPasswordInput = document.querySelector("#authPassword");
+const authSubmitButton = document.querySelector("#authSubmitButton");
+const authStatus = document.querySelector("#authStatus");
+const showLoginButton = document.querySelector("#showLoginButton");
+const showRegisterButton = document.querySelector("#showRegisterButton");
+const currentUserLabel = document.querySelector("#currentUserLabel");
+const configUserLabel = document.querySelector("#configUserLabel");
+const pilotNameDisplay = document.querySelector("#pilotNameDisplay");
+const pilotStatusDisplay = document.querySelector("#pilotStatusDisplay");
 const casperSlot = document.querySelector("#casperSlot");
 const balthasarSlot = document.querySelector("#balthasarSlot");
 const melchiorSlot = document.querySelector("#melchiorSlot");
@@ -22,26 +31,64 @@ const submitButton = document.querySelector("#submitButton");
 const openConfigButton = document.querySelector("#openConfigButton");
 const backToInferenceButton = document.querySelector("#backToInferenceButton");
 const clearHistoryButton = document.querySelector("#clearHistoryButton");
+const toggleCouncilArchiveButton = document.querySelector("#toggleCouncilArchiveButton");
 const temperatureInput = document.querySelector("#temperature");
 const temperatureValue = document.querySelector("#temperatureValue");
 const configForm = document.querySelector("#configForm");
 const useRecommendedButton = document.querySelector("#useRecommended");
+const validateProvidersButton = document.querySelector("#validateProvidersButton");
+const configValidationStatus = document.querySelector("#configValidationStatus");
 const inferenceView = document.querySelector("#inferenceView");
 const configView = document.querySelector("#configView");
 const historyList = document.querySelector("#historyList");
+const councilArchivePanel = document.querySelector("#councilArchivePanel");
+const councilArchiveGrid = document.querySelector("#councilArchiveGrid");
+const councilArchiveStatus = document.querySelector("#councilArchiveStatus");
 const serverSetupNotice = document.querySelector("#serverSetupNotice");
-const pilotNameInput = document.querySelector("#pilotName");
-const pilotNameDisplay = document.querySelector("#pilotNameDisplay");
 const musicPanel = document.querySelector("#musicPanel");
 const musicStatus = document.querySelector("#musicStatus");
 const themeAudio = document.querySelector("#themeAudio");
+const systemPromptInput = document.querySelector("#systemPrompt");
+const maxTokensInput = document.querySelector("#maxTokens");
+const accountStatus = document.querySelector("#accountStatus");
 
+let authMode = "login";
+let userToken = "";
+let currentUsername = "";
 let catalog = null;
-let runtimeConfig = null;
+let runtimeConfig = [];
+let runtimeSettings = null;
 let memoryHistory = [];
+let latestCouncilReplies = [];
 let musicLibrary = [];
 let activeTrackId = null;
 let activeTrackButton = null;
+
+function renderBirthdayNotice() {
+  const today = new Date();
+  const isCherryBirthday = today.getMonth() === 5 && today.getDate() === 18;
+  if (!isCherryBirthday || document.querySelector("#cherryBirthdayNotice")) {
+    return;
+  }
+
+  const notice = document.createElement("aside");
+  notice.id = "cherryBirthdayNotice";
+  notice.className = "birthday-notice";
+  notice.setAttribute("aria-label", "Birthday notice");
+  notice.textContent = "Happy birthday, Cherry!";
+  document.body.appendChild(notice);
+}
+
+function clearCouncilArchive() {
+  latestCouncilReplies = [];
+  if (typeof councilArchiveGrid?.innerHTML === "string") {
+    renderCouncilArchive();
+  }
+}
+
+function allProvidersReady(config) {
+  return Array.isArray(config) && config.length === 3 && config.every((item) => item.server_ready);
+}
 
 temperatureInput.addEventListener("input", () => {
   temperatureValue.textContent = temperatureInput.value;
@@ -66,66 +113,80 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-function migrateConfig(config) {
-  if (!Array.isArray(config)) {
-    return null;
-  }
-
-  let changed = false;
-  const migrated = config.map((item) => {
-    const next = { ...item };
-    if ("api_key" in next) {
-      delete next.api_key;
-      changed = true;
+async function readErrorMessage(response) {
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    try {
+      const payload = await response.json();
+      if (typeof payload?.detail === "string") {
+        return payload.detail;
+      }
+      if (Array.isArray(payload?.detail) && payload.detail.length) {
+        const first = payload.detail[0];
+        if (typeof first?.msg === "string") {
+          return first.msg;
+        }
+      }
+      return JSON.stringify(payload);
+    } catch {
+      return `HTTP ${response.status}`;
     }
-    if (next?.provider_key === "doubao" && next?.model && LEGACY_DOUBAO_MODELS.has(next.model)) {
-      next.model = DEFAULT_DOUBAO_MODEL;
-      changed = true;
-    }
-    return next;
-  });
-
-  if (changed) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
   }
 
-  return migrated;
+  const text = await response.text();
+  return text || `HTTP ${response.status}`;
 }
 
-function getSavedConfig() {
+function getSavedToken() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? migrateConfig(JSON.parse(raw)) : null;
+    return localStorage.getItem(USER_TOKEN_KEY) || "";
   } catch {
-    return null;
+    return "";
   }
 }
 
-function getSavedHistory() {
-  try {
-    const raw = localStorage.getItem(HISTORY_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
+function saveToken(token) {
+  userToken = token;
+  localStorage.setItem(USER_TOKEN_KEY, token);
+}
+
+function clearToken() {
+  userToken = "";
+  localStorage.removeItem(USER_TOKEN_KEY);
+}
+
+function setAuthMode(mode) {
+  authMode = mode;
+  showLoginButton.classList.toggle("is-active", mode === "login");
+  showRegisterButton.classList.toggle("is-active", mode === "register");
+  authSubmitButton.textContent = mode === "login" ? "LOGIN" : "REGISTER";
+  authStatus.textContent =
+    mode === "login"
+      ? "Sign in to restore your server-side MAGI profile."
+      : "Create a new pilot account.";
+}
+
+showLoginButton.addEventListener("click", () => setAuthMode("login"));
+showRegisterButton.addEventListener("click", () => setAuthMode("register"));
+
+function setUserIdentity(username) {
+  const previousUsername = currentUsername;
+  currentUsername = username || "";
+  const display = currentUsername ? currentUsername.toUpperCase() : "ANONYMOUS";
+  currentUserLabel.textContent = display;
+  configUserLabel.textContent = display;
+  pilotNameDisplay.textContent = display;
+  pilotStatusDisplay.textContent = currentUsername ? "ENTRY PLUG LINKED" : "ENTRY PLUG STANDBY";
+  accountStatus.textContent = currentUsername
+    ? `Authenticated as ${currentUsername}. Your MAGI keys and memory archive are isolated per account.`
+    : "Sign in to edit your server-side MAGI council.";
+  if (!currentUsername || (previousUsername && previousUsername !== currentUsername)) {
+    clearCouncilArchive();
   }
 }
 
-function getSavedPilotName() {
-  try {
-    return localStorage.getItem(PILOT_NAME_KEY) || "Shinji Ikari";
-  } catch {
-    return "Shinji Ikari";
-  }
-}
-
-function savePilotName(name) {
-  localStorage.setItem(PILOT_NAME_KEY, name);
-}
-
-function renderPilotName(name) {
-  const safeName = (name || "Shinji Ikari").trim() || "Shinji Ikari";
-  pilotNameDisplay.textContent = safeName.toUpperCase();
-  pilotNameInput.value = safeName;
+function showAuthGate(visible) {
+  authGate.classList.toggle("hidden", !visible);
 }
 
 function setMusicButtonState(button, isPlaying) {
@@ -133,7 +194,9 @@ function setMusicButtonState(button, isPlaying) {
     return;
   }
   button.classList.toggle("is-playing", isPlaying);
-  button.textContent = isPlaying ? "\u275A\u275A" : "\u25B6";
+  button.innerHTML = isPlaying
+    ? '<span class="icon-pause" aria-hidden="true"></span>'
+    : '<span class="icon-play" aria-hidden="true"></span>';
   button.setAttribute("aria-pressed", isPlaying ? "true" : "false");
 }
 
@@ -150,13 +213,7 @@ function musicTitleClass(title) {
   if (title === "Beautiful World") {
     return "music-title beautiful-world";
   }
-  if (title === "残酷な天使のテーゼ") {
-    return "music-title cruel-angel";
-  }
-  if (title === "残酷な天使のテーゼ") {
-    return "music-title cruel-angel";
-  }
-  if (title === "残酷な天使のテーゼ") {
+  if (title === CRUEL_ANGELS_TITLE) {
     return "music-title cruel-angel";
   }
   return "music-title";
@@ -181,7 +238,7 @@ function renderMusicLibrary() {
             title="${escapeHtml(track.available ? `Play ${track.title}` : track.reason || "Unavailable")}"
             aria-pressed="false"
           >
-            ▶
+            <span class="icon-play" aria-hidden="true"></span>
           </button>
           <div class="music-copy">
             <div class="${musicTitleClass(track.title)}">${escapeHtml(track.title)}</div>
@@ -245,25 +302,100 @@ themeAudio.addEventListener("pause", () => {
   }
 });
 
-function saveHistory() {
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(memoryHistory.slice(0, 20)));
+function applyRuntimeSettings(settings) {
+  runtimeSettings = settings;
+  systemPromptInput.value = settings.system_prompt;
+  temperatureInput.value = String(settings.temperature);
+  temperatureValue.textContent = String(settings.temperature);
+  maxTokensInput.value = String(settings.max_tokens);
 }
 
-function saveConfig(config) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-  runtimeConfig = config;
+function buildHintText(providerKey) {
+  const preset = catalog.presets.find((item) => item.key === providerKey);
+  if (!preset) {
+    return "Choose three providers. This account will store its own API keys on the server.";
+  }
+  if (providerKey === "custom") {
+    return "Custom mode requires an OpenAI-compatible chat/completions endpoint and its own API key.";
+  }
+  if (!preset.server_ready) {
+    return `${preset.label} is not preloaded from the server environment. Save your own API key for this account.`;
+  }
+  return `${preset.label} can use either the server fallback credential or your account-specific key.`;
 }
 
-function defaultSelectionFor(slot) {
-  const recommended = catalog.recommended.find((item) => item.slot === slot);
-  return recommended ?? {
+function buildDocsLink(providerKey) {
+  const preset = catalog.presets.find((item) => item.key === providerKey);
+  if (!preset?.docs_url) {
+    return "";
+  }
+
+  return `
+    <a class="provider-doc-link" href="${escapeHtml(preset.docs_url)}" target="_blank" rel="noreferrer">
+      OPEN API SETUP GUIDE
+    </a>
+  `;
+}
+
+function buildSlotForm(slot, config) {
+  const current = config.find((item) => item.slot === slot) || {
     slot,
     provider_key: "",
     label: "",
     model: "",
     base_url: "",
+    api_key: "",
+    has_api_key: false,
     server_ready: false,
   };
+  const providerKey = current.provider_key || "";
+  const ready = Boolean(current.has_api_key || current.server_ready);
+
+  return `
+    <section class="slot-card" data-slot="${slot}">
+      <div class="slot-card-head">
+        <h3>${SLOT_TITLES[slot]}</h3>
+        <span class="server-badge ${ready ? "is-ready" : "is-missing"}">${ready ? "KEY STORED" : "NO KEY"}</span>
+      </div>
+      <div>
+        <label for="${slot}-provider">Provider</label>
+        <select id="${slot}-provider" data-role="provider">
+          <option value="">Select a provider</option>
+          ${catalog.presets
+            .map(
+              (item) => `
+                <option value="${item.key}" ${item.key === providerKey ? "selected" : ""}>${item.label}</option>
+              `,
+            )
+            .join("")}
+        </select>
+      </div>
+      <div>
+        <label for="${slot}-label">Display Name</label>
+        <input id="${slot}-label" data-role="label" type="text" value="${escapeHtml(current.label || "")}" />
+      </div>
+      <div>
+        <label for="${slot}-model">Model</label>
+        <input id="${slot}-model" data-role="model" type="text" value="${escapeHtml(current.model || "")}" />
+      </div>
+      <div>
+        <label for="${slot}-url">Base URL</label>
+        <input id="${slot}-url" data-role="base_url" type="text" value="${escapeHtml(current.base_url || "")}" />
+      </div>
+      <div>
+        <label for="${slot}-api-key">API Key</label>
+        <input
+          id="${slot}-api-key"
+          data-role="api_key"
+          type="password"
+          value=""
+          placeholder="${ready ? "Leave blank to keep the saved key" : "Enter API key"}"
+        />
+      </div>
+      <div class="provider-doc-shell" data-role="docs-link">${buildDocsLink(providerKey)}</div>
+      <p class="config-hint" data-role="hint">${buildHintText(providerKey)}</p>
+    </section>
+  `;
 }
 
 function buildConfigForm(config) {
@@ -276,64 +408,6 @@ function buildConfigForm(config) {
   syncDuplicateOptions();
 }
 
-function buildSlotForm(slot, config) {
-  const current = config.find((item) => item.slot === slot) ?? defaultSelectionFor(slot);
-  const providerKey = current.provider_key || "";
-  const isCustom = providerKey === "custom";
-  const preset = catalog.presets.find((item) => item.key === providerKey);
-  const isReady = Boolean(preset?.server_ready);
-  return `
-    <section class="slot-card" data-slot="${slot}">
-      <div class="slot-card-head">
-        <h3>${SLOT_TITLES[slot]}</h3>
-        <span class="server-badge ${isReady ? "is-ready" : "is-missing"}">${isReady ? "SERVER READY" : "MISSING SERVER KEY"}</span>
-      </div>
-      <div>
-        <label for="${slot}-provider">Provider</label>
-        <select id="${slot}-provider" data-role="provider">
-          <option value="">Select a provider</option>
-          ${catalog.presets
-            .map(
-              (preset) => `
-                <option value="${preset.key}" ${preset.key === providerKey ? "selected" : ""}>${preset.label}</option>
-              `,
-            )
-            .join("")}
-        </select>
-      </div>
-      <div>
-        <label for="${slot}-model">Model</label>
-        <input id="${slot}-model" data-role="model" type="text" value="${escapeHtml(current.model || "")}" placeholder="Example: gpt-4o-mini" />
-      </div>
-      <div class="custom-fields ${isCustom ? "" : "hidden"}" data-role="custom-fields">
-        <div>
-          <label for="${slot}-label">Display Name</label>
-          <input id="${slot}-label" data-role="label" type="text" value="${escapeHtml(current.label || "")}" placeholder="Example: Mission Gateway" />
-        </div>
-        <div>
-          <label for="${slot}-url">Base URL</label>
-          <input id="${slot}-url" data-role="base_url" type="text" value="${escapeHtml(current.base_url || "")}" placeholder="https://your-provider.example.com/v1" />
-        </div>
-      </div>
-      <p class="config-hint" data-role="hint">${buildHintText(providerKey)}</p>
-    </section>
-  `;
-}
-
-function buildHintText(providerKey) {
-  const preset = catalog.presets.find((item) => item.key === providerKey);
-  if (!preset) {
-    return "Choose three providers. Real API keys are configured in the server .env file, never in the browser.";
-  }
-  if (providerKey === "custom") {
-    return "Custom mode requires a server-side integration. Public deployment should use preconfigured providers only.";
-  }
-  if (!preset.server_ready) {
-    return `${preset.label} is selected, but its server API key is not loaded yet. Add it to the server .env file, then restart the app.`;
-  }
-  return `${preset.label} uses server-managed credentials. Endpoint: ${preset.base_url}`;
-}
-
 function wireSlotEvents() {
   document.querySelectorAll("[data-role='provider']").forEach((select) => {
     select.addEventListener("change", handleProviderChange);
@@ -342,35 +416,27 @@ function wireSlotEvents() {
 
 function handleProviderChange(event) {
   const slotCard = event.target.closest(".slot-card");
-  const slot = slotCard.dataset.slot;
   const providerKey = event.target.value;
   const preset = catalog.presets.find((item) => item.key === providerKey);
-  const modelInput = slotCard.querySelector("[data-role='model']");
   const labelInput = slotCard.querySelector("[data-role='label']");
+  const modelInput = slotCard.querySelector("[data-role='model']");
   const urlInput = slotCard.querySelector("[data-role='base_url']");
-  const customFields = slotCard.querySelector("[data-role='custom-fields']");
   const hint = slotCard.querySelector("[data-role='hint']");
+  const docsLink = slotCard.querySelector("[data-role='docs-link']");
   const badge = slotCard.querySelector(".server-badge");
 
   if (preset) {
-    modelInput.value = preset.default_model;
-    hint.textContent = buildHintText(providerKey);
-    if (badge) {
+    labelInput.value = labelInput.value.trim() || preset.label;
+    modelInput.value = modelInput.value.trim() || preset.default_model;
+    urlInput.value = urlInput.value.trim() || preset.base_url;
+    if (!slotCard.querySelector("[data-role='api_key']").value.trim()) {
       badge.className = `server-badge ${preset.server_ready ? "is-ready" : "is-missing"}`;
-      badge.textContent = preset.server_ready ? "SERVER READY" : "MISSING SERVER KEY";
+      badge.textContent = preset.server_ready ? "KEY STORED" : "NO KEY";
     }
   }
 
-  if (providerKey === "custom") {
-    customFields.classList.remove("hidden");
-    labelInput.value = labelInput.value || "Custom";
-    urlInput.value = urlInput.value || preset.base_url;
-  } else {
-    customFields.classList.add("hidden");
-    labelInput.value = preset ? preset.label : "";
-    urlInput.value = preset ? preset.base_url : "";
-  }
-
+  hint.textContent = buildHintText(providerKey);
+  docsLink.innerHTML = buildDocsLink(providerKey);
   syncDuplicateOptions();
 }
 
@@ -393,19 +459,16 @@ function syncDuplicateOptions() {
 function collectConfigFromForm() {
   return SLOT_ORDER.map((slot) => {
     const slotCard = document.querySelector(`.slot-card[data-slot="${slot}"]`);
-    const providerKey = slotCard.querySelector("[data-role='provider']").value.trim();
-    const model = slotCard.querySelector("[data-role='model']").value.trim();
-    const labelInput = slotCard.querySelector("[data-role='label']");
-    const urlInput = slotCard.querySelector("[data-role='base_url']");
-    const preset = catalog.presets.find((item) => item.key === providerKey);
-    const label = providerKey === "custom" ? labelInput.value.trim() : preset?.label || "";
-    const baseUrl = providerKey === "custom" ? urlInput.value.trim() : preset?.base_url || "";
+    const badge = slotCard.querySelector(".server-badge");
     return {
       slot,
-      provider_key: providerKey,
-      label,
-      model,
-      base_url: baseUrl,
+      provider_key: slotCard.querySelector("[data-role='provider']").value.trim(),
+      label: slotCard.querySelector("[data-role='label']").value.trim(),
+      model: slotCard.querySelector("[data-role='model']").value.trim(),
+      base_url: slotCard.querySelector("[data-role='base_url']").value.trim(),
+      api_key: slotCard.querySelector("[data-role='api_key']").value.trim(),
+      has_api_key: badge.textContent === "KEY STORED",
+      server_ready: badge.textContent === "KEY STORED",
     };
   });
 }
@@ -419,56 +482,69 @@ function validateConfig(config) {
     throw new Error("All three MAGI providers must be unique.");
   }
   for (const item of config) {
-    if (!item.model || !item.base_url || !item.label) {
-      throw new Error(`Complete the model, endpoint, and label fields for ${SLOT_TITLES[item.slot]}.`);
+    if (!item.label || !item.model || !item.base_url) {
+      throw new Error(`Complete all fields for ${SLOT_TITLES[item.slot]}.`);
     }
   }
 }
 
 function renderConfiguredProviders(config) {
+  runtimeConfig = config.map((provider) => ({
+    slot: provider.slot,
+    provider_key: provider.provider_key,
+    label: provider.label,
+    model: provider.model,
+    base_url: provider.base_url,
+    server_ready: Boolean(provider.server_ready || provider.has_api_key),
+  }));
+
   renderNodeSlots(
-    config.map((provider) => ({
+    runtimeConfig.map((provider) => ({
       code: provider.slot,
       name: `${SLOT_TITLES[provider.slot]} / ${provider.label}`,
       provider_key: provider.provider_key,
-      status: "ready",
-      content: "Server-managed credentials armed. Awaiting deliberation.",
+      status: provider.server_ready ? "ready" : "missing_config",
+      content: provider.server_ready
+        ? "User profile loaded. Awaiting deliberation."
+        : "No saved API key for this user and node. Open settings and store one.",
       model: provider.model,
       base_url: provider.base_url,
       latency_ms: 0,
-      error: null,
+      error: provider.server_ready ? null : "missing_api_key",
     })),
   );
+  renderCouncilArchive();
   evaluationMeta.textContent = "Awaiting evaluator output.";
+  if (!currentUsername) {
+    setValidationStatus("Sign in to validate and save your own MAGI provider keys.", "pending");
+    return;
+  }
+  if (allProvidersReady(runtimeConfig)) {
+    setValidationStatus("All three MAGI nodes are validated and ready for deliberation.", "success");
+  } else {
+    setValidationStatus("Three valid provider keys are required before the bridge can unlock.", "error");
+  }
 }
 
 function renderServerSetupNotice() {
-  const configuredProviders = catalog.presets.filter((item) => item.server_ready);
-  const missingProviders = catalog.presets.filter((item) => !item.server_ready && item.key !== "custom");
-
-  if (!missingProviders.length) {
-    serverSetupNotice.innerHTML = `
-      <strong>SERVER API STATUS:</strong>
-      ${configuredProviders.length} provider credentials loaded from server .env.
-    `;
-    serverSetupNotice.className = "server-setup-notice ready";
+  const available = runtimeConfig.filter((item) => item.server_ready).map((item) => item.label);
+  if (!currentUsername) {
+    serverSetupNotice.innerHTML = "<strong>ACCOUNT STATUS:</strong> Sign in to access your personal MAGI configuration.";
+    serverSetupNotice.className = "server-setup-notice missing";
     return;
   }
-
-  const missingLabels = missingProviders.map((item) => item.label).join(", ");
-  serverSetupNotice.innerHTML = `
-    <strong>SERVER API STATUS:</strong>
-    Missing credentials for ${escapeHtml(missingLabels)}.
-    Add them to the server <code>.env</code> file, then restart the app.
-  `;
-  serverSetupNotice.className = "server-setup-notice missing";
+  if (!available.length) {
+    serverSetupNotice.innerHTML = `<strong>ACCOUNT STATUS:</strong> ${escapeHtml(currentUsername)} has no active API key stored yet.`;
+    serverSetupNotice.className = "server-setup-notice missing";
+    return;
+  }
+  serverSetupNotice.innerHTML = `<strong>ACCOUNT STATUS:</strong> ${escapeHtml(currentUsername)} has active keys for ${escapeHtml(available.join(", "))}.`;
+  serverSetupNotice.className = "server-setup-notice ready";
 }
 
-function truncate(value, max = 160) {
-  if (!value) {
-    return "";
-  }
-  return value.length > max ? `${value.slice(0, max)}...` : value;
+function setValidationStatus(message, tone = "pending") {
+  configValidationStatus.textContent = message;
+  configValidationStatus.className = `config-validation-status ${tone}`;
 }
 
 function renderHistory() {
@@ -482,8 +558,8 @@ function renderHistory() {
       (item, index) => `
         <article class="history-item" data-history-index="${index}">
           <div class="history-time">${item.time}</div>
-          <div class="history-question">${escapeHtml(truncate(item.prompt, 80))}</div>
-          <div class="history-answer">${escapeHtml(truncate(item.answer, 150))}</div>
+          <div class="history-question">${escapeHtml(item.prompt)}</div>
+          <div class="history-answer">${escapeHtml(item.answer)}</div>
         </article>
       `,
     )
@@ -502,21 +578,8 @@ function renderHistory() {
   });
 }
 
-function buildMemoryPrompt(prompt) {
-  if (!memoryHistory.length) {
-    return prompt;
-  }
-
-  const recent = memoryHistory.slice(0, 5);
-  const memoryBlock = recent
-    .map((item, index) => `Memory ${index + 1}\nQuestion: ${item.prompt}\nFinal Verdict: ${item.answer}`)
-    .join("\n\n");
-
-  return `Conversation Memory:\n${memoryBlock}\n\nCurrent Question:\n${prompt}`;
-}
-
 function createSyncingMembers() {
-  return (runtimeConfig || []).map((provider) => ({
+  return runtimeConfig.map((provider) => ({
     code: provider.slot,
     name: `${SLOT_TITLES[provider.slot]} / ${provider.label}`,
     provider_key: provider.provider_key,
@@ -539,67 +602,114 @@ function getDecisionTone(member) {
   if (member.status === "missing_config") {
     return "tone-neutral";
   }
-
-  const content = (member.content || "").trim();
-  const normalized = content.toLowerCase();
-  const firstWindow = normalized.slice(0, 48);
-  const firstLine = normalized.split(/\r?\n/, 1)[0].trim();
-
-  const approveMarkers = ["approve", "approved", "accept", "accepted", "affirm"];
-  const rejectMarkers = ["reject", "rejected", "deny", "denied"];
-
-  const hasExplicitApprove =
-    approveMarkers.some((marker) => firstWindow.startsWith(marker) || firstLine === marker) ||
-    /^(verdict|decision)\s*:\s*(approve|approved|accept|accepted|affirm)/i.test(firstLine);
-
-  const hasExplicitReject =
-    rejectMarkers.some((marker) => firstWindow.startsWith(marker) || firstLine === marker) ||
-    /^(verdict|decision)\s*:\s*(reject|rejected|deny|denied|negative)/i.test(firstLine);
-
-  if (hasExplicitReject) {
-    return "tone-reject";
-  }
-  if (hasExplicitApprove) {
-    return "tone-approve";
-  }
   return "tone-neutral";
 }
 
+function getNodeLore(member) {
+  const loreMap = {
+    melchior: {
+      title: "LOGIC FILTER",
+      copy: "MELCHIOR monitors doctrine, rules, and operational consistency before authorization is granted.",
+    },
+    balthasar: {
+      title: "TACTICAL CORE",
+      copy: "BALTHASAR models response tempo, practical execution, and mission-path viability under pressure.",
+    },
+    casper: {
+      title: "HUMAN FACTOR",
+      copy: "CASPER preserves empathy, ambiguity handling, and pilot-centered judgment across the council.",
+    },
+  };
+
+  if (member.status === "syncing") {
+    return {
+      title: "SYNC IN PROGRESS",
+      copy: "Council synchronization is active. Signal routing, model wakeup, and verdict alignment are underway.",
+    };
+  }
+
+  if (member.status === "error") {
+    return {
+      title: "LINK FAILURE",
+      copy: "The node rejected the current bridge request. Inspect the endpoint, credential scope, or provider access state.",
+    };
+  }
+
+  if (member.status === "missing_config") {
+    return {
+      title: "KEY REQUIRED",
+      copy: "This node cannot join deliberation until a valid API credential is stored and validated for the current pilot.",
+    };
+  }
+
+  return loreMap[member.code] || loreMap.melchior;
+}
+
 function renderNodeCard(member) {
-  const latencyLine = member.latency_ms ? `<div class="provider-meta">Latency: ${member.latency_ms} ms</div>` : "";
   const toneClass = getDecisionTone(member);
-  const openAttr = member.status === "syncing" ? "open" : "";
+  const lore = getNodeLore(member);
+  const nodeTitle = SLOT_TITLES[member.code] || member.name || "MAGI NODE";
+  const providerLabel = member.provider_key ? member.provider_key.toUpperCase() : "UNASSIGNED";
+  const modelLabel = member.model || "NO MODEL";
+  const latencyLabel = member.latency_ms ? `${member.latency_ms} MS` : "STANDBY";
+  const replyBody = member.error ? `${member.content}\n\nError: ${member.error}` : member.content;
+  const hasNodeReply = Boolean(replyBody && (member.latency_ms || member.error));
   const bodyContent =
     member.status === "syncing"
       ? `
         <div class="loading-copy">
-          <div class="provider-meta">Provider: ${member.provider_key}</div>
-          <div class="provider-meta">Model: ${member.model}</div>
+          <div class="provider-meta">Provider Bus: ${providerLabel}</div>
+          <div class="provider-meta">Model Core: ${escapeHtml(modelLabel)}</div>
+          <div class="provider-meta">Sync State: LIVE HANDSHAKE</div>
           <div class="loading-line"></div>
           <div class="loading-line mid"></div>
           <div class="loading-line short"></div>
         </div>
       `
+      : hasNodeReply
+        ? `
+        <div class="node-stat-grid">
+          <div class="node-stat">
+            <span>Provider Bus</span>
+            <strong>${providerLabel}</strong>
+          </div>
+          <div class="node-stat">
+            <span>Latency</span>
+            <strong>${latencyLabel}</strong>
+          </div>
+        </div>
+        <pre class="node-answer-body">${escapeHtml(replyBody)}</pre>
+      `
       : `
-        <div class="provider-meta">Provider: ${member.provider_key}</div>
-        <div class="provider-meta">Model: ${member.model}</div>
-        ${latencyLine}
-        <div class="provider-meta">Base URL: ${member.base_url}</div>
-        <pre>${escapeHtml(member.content)}${member.error ? `\n\nError: ${escapeHtml(member.error)}` : ""}</pre>
+        <div class="node-lore-block">
+          <div class="node-lore-title">${lore.title}</div>
+          <div class="node-lore-copy">${lore.copy}</div>
+        </div>
+        <div class="node-stat-grid">
+          <div class="node-stat">
+            <span>Provider Bus</span>
+            <strong>${providerLabel}</strong>
+          </div>
+          <div class="node-stat">
+            <span>Latency</span>
+            <strong>${latencyLabel}</strong>
+          </div>
+        </div>
       `;
   return `
-    <details class="provider-card ${toneClass}" data-collapsible="true" ${openAttr}>
-      <summary class="provider-card-header">
-        <div class="provider-card-summary">
-          <span class="caret"></span>
-          <h3>${member.name}</h3>
+    <article class="provider-card ${toneClass}">
+      <div class="provider-card-shell">
+        <div class="provider-card-header">
+          <div class="provider-card-summary">
+            <h3>${nodeTitle}</h3>
+          </div>
+          <span class="status-pill ${member.status}">${member.status === "syncing" ? "SYNCING" : member.status.toUpperCase()}</span>
         </div>
-        <span class="status-pill ${member.status}">${member.status === "syncing" ? "SYNCING" : member.status.toUpperCase()}</span>
-      </summary>
-      <div class="provider-card-body">
-        ${bodyContent}
+        <div class="provider-card-body">
+          ${bodyContent}
+        </div>
       </div>
-    </details>
+    </article>
   `;
 }
 
@@ -609,11 +719,9 @@ function renderNodeSlots(members) {
     balthasar: balthasarSlot,
     melchior: melchiorSlot,
   };
-
   Object.values(slotMap).forEach((slot) => {
     slot.innerHTML = "";
   });
-
   members.forEach((member) => {
     const slot = slotMap[member.code];
     if (slot) {
@@ -623,56 +731,307 @@ function renderNodeSlots(members) {
 }
 
 function renderCouncil(council, evaluation) {
+  latestCouncilReplies = council.map((member) => ({ ...member }));
   renderNodeSlots(council);
-  if (evaluation) {
-    evaluationMeta.textContent = `${evaluation.name} | ${evaluation.status.toUpperCase()} | ${evaluation.model}`;
-  } else {
-    evaluationMeta.textContent = "Awaiting evaluator output.";
+  renderCouncilArchive();
+  evaluationMeta.textContent = evaluation
+    ? `${evaluation.name} | ${evaluation.status.toUpperCase()} | ${evaluation.model}`
+    : "Awaiting evaluator output.";
+}
+
+function setCouncilArchiveOpen(isOpen) {
+  councilArchivePanel.classList.toggle("hidden", !isOpen);
+  toggleCouncilArchiveButton.textContent = isOpen ? "HIDE COUNCIL LOG" : "OPEN COUNCIL LOG";
+  toggleCouncilArchiveButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
+}
+
+function renderCouncilArchive() {
+  const sortedReplies = SLOT_ORDER
+    .map((slot) => latestCouncilReplies.find((item) => item.code === slot))
+    .filter(Boolean);
+
+  toggleCouncilArchiveButton.disabled = sortedReplies.length === 0;
+
+  if (!sortedReplies.length) {
+    councilArchiveStatus.textContent = "No deliberation record yet.";
+    councilArchiveGrid.innerHTML = `<div class="history-empty">No council replies archived yet.</div>`;
+    setCouncilArchiveOpen(false);
+    return;
+  }
+
+  councilArchiveStatus.textContent = `${sortedReplies.length}/3 council records available`;
+  councilArchiveGrid.innerHTML = sortedReplies
+    .map((reply) => {
+      const slotTitle = SLOT_TITLES[reply.code] || reply.code.toUpperCase();
+      const statusLabel = reply.status === "ready" ? "VERDICT LOCKED" : reply.status.toUpperCase();
+      const latencyLabel = reply.latency_ms ? `${reply.latency_ms} MS` : "STANDBY";
+      const body = reply.error ? `${reply.content}\n\nError: ${reply.error}` : reply.content;
+      return `
+        <article class="council-reply-card tone-${reply.status}">
+          <div class="council-reply-head">
+            <div>
+              <div class="council-reply-node">${slotTitle}</div>
+              <div class="council-reply-provider">${escapeHtml(reply.provider_key.toUpperCase())}</div>
+            </div>
+            <span class="status-pill ${reply.status}">${statusLabel}</span>
+          </div>
+          <div class="council-reply-meta">
+            <span>MODEL CORE: ${escapeHtml(reply.model)}</span>
+            <span>LATENCY: ${latencyLabel}</span>
+          </div>
+          <pre class="council-reply-body">${escapeHtml(body)}</pre>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+async function apiFetch(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  if (userToken) {
+    headers.set("X-User-Token", userToken);
+  }
+  const response = await fetch(path, { ...options, headers });
+  if (response.status === 401 && userToken) {
+    clearToken();
+    setUserIdentity("");
+    showAuthGate(true);
+    authStatus.textContent = "Session expired. Please sign in again.";
+    systemStatus.textContent = "AUTH REQUIRED";
+  }
+  return response;
+}
+
+async function loadUserBundle() {
+  const response = await apiFetch("/api/user/config");
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  setUserIdentity(data.username);
+  memoryHistory = data.history || [];
+  applyRuntimeSettings(data.runtime);
+  buildConfigForm(data.providers);
+  renderConfiguredProviders(data.providers);
+  renderHistory();
+  renderServerSetupNotice();
+  showAuthGate(false);
+  return data;
+}
+
+async function runConnectivityValidation(providers, { updateUi = true } = {}) {
+  const testResponse = await apiFetch("/api/test-providers", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ providers }),
+  });
+  if (!testResponse.ok) {
+    throw new Error(await readErrorMessage(testResponse));
+  }
+
+  const testData = await testResponse.json();
+  if (updateUi) {
+    renderNodeSlots(testData.results);
+    if (testData.ready_count === 3) {
+      setValidationStatus("ALL THREE MAGI NODES PASSED CONNECTIVITY VALIDATION.", "success");
+      evaluationMeta.textContent = "Connectivity validation complete: 3/3 ready";
+      consensusOutput.textContent = "Connectivity check complete. All three MAGI nodes are online and ready.";
+      systemStatus.textContent = "VALIDATION READY";
+    } else {
+      setValidationStatus(`CONNECTIVITY CHECK FAILED: ${testData.ready_count}/3 READY.`, "error");
+      evaluationMeta.textContent = `Connectivity check failed: ${testData.ready_count}/3 ready`;
+      consensusOutput.textContent = "One or more MAGI nodes failed connectivity validation. Fix the provider credentials and test again.";
+      systemStatus.textContent = "CONFIG FAULT";
+    }
+  }
+
+  return testData;
+}
+
+async function submitAuth(event) {
+  event.preventDefault();
+  const username = authUsernameInput.value.trim();
+  const password = authPasswordInput.value;
+
+  if (!username || !password) {
+    authStatus.textContent = "Enter both username and password.";
+    return;
+  }
+
+  authSubmitButton.disabled = true;
+  authSubmitButton.textContent = authMode === "login" ? "LOGGING IN..." : "REGISTERING...";
+
+  try {
+    const response = await fetch(authMode === "login" ? "/api/auth/login" : "/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response));
+    }
+
+    const data = await response.json();
+    saveToken(data.token);
+    authPasswordInput.value = "";
+    authStatus.textContent = `${authMode === "login" ? "Login" : "Registration"} successful. Loading your MAGI profile...`;
+    await loadUserBundle();
+    if (!allProvidersReady(runtimeConfig)) {
+      consensusOutput.textContent = `Welcome, ${data.username}. Before entering the bridge, configure three valid provider keys and pass connectivity checks.`;
+      systemStatus.textContent = "CONFIG REQUIRED";
+      switchView("config");
+    } else {
+      consensusOutput.textContent = `Welcome back, ${data.username}. Your personal MAGI profile is online.`;
+      systemStatus.textContent = "STANDBY";
+      switchView("inference");
+    }
+  } catch (error) {
+    clearToken();
+    setUserIdentity("");
+    authStatus.textContent = `Authentication failed: ${error.message}`;
+    showAuthGate(true);
+  } finally {
+    authSubmitButton.disabled = false;
+    authSubmitButton.textContent = authMode === "login" ? "LOGIN" : "REGISTER";
   }
 }
 
-configForm.addEventListener("submit", (event) => {
+authForm.addEventListener("submit", submitAuth);
+
+configForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!userToken) {
+    consensusOutput.textContent = "Sign in before saving your MAGI configuration.";
+    showAuthGate(true);
+    return;
+  }
+
   try {
-    const config = collectConfigFromForm();
-    validateConfig(config);
-    const pilotName = pilotNameInput.value.trim() || "Shinji Ikari";
-    savePilotName(pilotName);
-    renderPilotName(pilotName);
-    saveConfig(config);
-    renderConfiguredProviders(config);
-    consensusOutput.textContent = "Configuration saved. Credentials remain server-side. Return to the bridge and initiate deliberation.";
+    const providers = collectConfigFromForm();
+    validateConfig(providers);
+    const payload = {
+      providers,
+      runtime: {
+        system_prompt: systemPromptInput.value.trim(),
+        temperature: Number.parseFloat(temperatureInput.value),
+        max_tokens: Number.parseInt(maxTokensInput.value, 10),
+      },
+    };
+
+    setValidationStatus("Running provider connectivity checks before save...", "pending");
+    const testData = await runConnectivityValidation(providers, { updateUi: true });
+    if (testData.ready_count !== 3) {
+      switchView("config");
+      return;
+    }
+
+    const response = await apiFetch("/api/user/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response));
+    }
+
+    const data = await response.json();
+    memoryHistory = data.history || memoryHistory;
+    applyRuntimeSettings(data.runtime);
+    buildConfigForm(data.providers);
+    renderConfiguredProviders(data.providers);
+    renderHistory();
+    renderServerSetupNotice();
+    setValidationStatus("Configuration saved. All three MAGI nodes are validated for this account.", "success");
+    consensusOutput.textContent = `Configuration saved for ${data.username}. All three nodes passed validation and the bridge is now unlocked.`;
     systemStatus.textContent = "CONFIG SAVED";
     switchView("inference");
   } catch (error) {
-    consensusOutput.textContent = error.message;
+    consensusOutput.textContent = `Configuration save failed: ${error.message}`;
+    systemStatus.textContent = "CONFIG FAULT";
     switchView("config");
   }
 });
 
 useRecommendedButton.addEventListener("click", () => {
-  buildConfigForm(catalog.recommended);
+  const recommended = catalog.recommended.map((item) => ({
+    ...item,
+    api_key: "",
+    has_api_key: item.server_ready,
+  }));
+  buildConfigForm(recommended);
+  setValidationStatus("Recommended provider preset loaded. Run connectivity validation before saving.", "pending");
 });
 
-clearHistoryButton.addEventListener("click", () => {
-  memoryHistory = [];
-  saveHistory();
-  renderHistory();
-  consensusOutput.textContent = "Memory archive cleared.";
+toggleCouncilArchiveButton.addEventListener("click", () => {
+  const isOpen = councilArchivePanel.classList.contains("hidden");
+  setCouncilArchiveOpen(isOpen);
+});
+
+validateProvidersButton.addEventListener("click", async () => {
+  if (!userToken) {
+    consensusOutput.textContent = "Sign in before validating your MAGI provider keys.";
+    showAuthGate(true);
+    return;
+  }
+
+  try {
+    const providers = collectConfigFromForm();
+    validateConfig(providers);
+    validateProvidersButton.disabled = true;
+    validateProvidersButton.textContent = "TESTING...";
+    setValidationStatus("Running provider connectivity checks...", "pending");
+    await runConnectivityValidation(providers, { updateUi: true });
+  } catch (error) {
+    setValidationStatus(`VALIDATION FAILED: ${error.message}`, "error");
+    consensusOutput.textContent = `Connectivity validation failed: ${error.message}`;
+    systemStatus.textContent = "CONFIG FAULT";
+  } finally {
+    validateProvidersButton.disabled = false;
+    validateProvidersButton.textContent = "TEST CONNECTIVITY";
+  }
+});
+
+clearHistoryButton.addEventListener("click", async () => {
+  if (!userToken) {
+    showAuthGate(true);
+    return;
+  }
+
+  try {
+    const response = await apiFetch("/api/user/history", { method: "DELETE" });
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response));
+    }
+    memoryHistory = [];
+    renderHistory();
+    consensusOutput.textContent = "Server-side memory archive cleared for this user.";
+  } catch (error) {
+    consensusOutput.textContent = `Clear history failed: ${error.message}`;
+  }
 });
 
 chatForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const prompt = document.querySelector("#prompt").value.trim();
-  const systemPrompt = document.querySelector("#systemPrompt").value.trim();
-  const maxTokens = Number.parseInt(document.querySelector("#maxTokens").value, 10);
 
-  if (!runtimeConfig) {
+  if (!userToken) {
+    consensusOutput.textContent = "Sign in before starting deliberation.";
+    showAuthGate(true);
+    return;
+  }
+  if (!allProvidersReady(runtimeConfig)) {
+    consensusOutput.textContent = "You must configure and validate all three provider APIs before entering deliberation.";
+    systemStatus.textContent = "CONFIG REQUIRED";
+    switchView("config");
+    return;
+  }
+  if (!runtimeConfig.length) {
     consensusOutput.textContent = "Open the settings deck and configure all three MAGI nodes first.";
     switchView("config");
     return;
   }
-
   if (!prompt) {
     consensusOutput.textContent = "Enter a mission prompt before starting deliberation.";
     return;
@@ -686,73 +1045,94 @@ chatForm.addEventListener("submit", async (event) => {
   evaluationMeta.textContent = "Evaluator synchronizing...";
 
   try {
-    const response = await fetch("/api/deliberate", {
+    const response = await apiFetch("/api/deliberate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        prompt: buildMemoryPrompt(prompt),
-        system_prompt: systemPrompt,
+        prompt,
+        system_prompt: systemPromptInput.value.trim(),
         temperature: Number.parseFloat(temperatureInput.value),
-        max_tokens: maxTokens,
+        max_tokens: Number.parseInt(maxTokensInput.value, 10),
         providers: runtimeConfig,
       }),
     });
-
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || `HTTP ${response.status}`);
+      throw new Error(await readErrorMessage(response));
     }
 
     const data = await response.json();
+    await loadUserBundle();
     consensusOutput.textContent = data.consensus;
     renderCouncil(data.council, data.evaluation);
     systemStatus.textContent = "DECISION READY";
-    memoryHistory.unshift({
-      prompt,
-      answer: data.consensus,
-      time: new Date().toLocaleString(),
-    });
-    memoryHistory = memoryHistory.slice(0, 20);
-    saveHistory();
-    renderHistory();
     switchView("inference");
   } catch (error) {
     consensusOutput.textContent = `Deliberation failed: ${error.message}`;
     systemStatus.textContent = "FAULT";
   } finally {
     submitButton.disabled = false;
-    submitButton.textContent = "INITIATE MAGI DELIBERATION";
+    submitButton.textContent = "INITIATE DELIBERATION";
   }
 });
 
 async function bootstrap() {
-  const [catalogResponse, musicResponse] = await Promise.all([
-    fetch("/api/catalog"),
-    fetch("/api/music/library"),
-  ]);
+  renderBirthdayNotice();
+  const [catalogResponse, musicResponse] = await Promise.all([fetch("/api/catalog"), fetch("/api/music/library")]);
+  if (!catalogResponse.ok) {
+    throw new Error(`Catalog failed with HTTP ${catalogResponse.status}`);
+  }
+  if (!musicResponse.ok) {
+    throw new Error(`Music library failed with HTTP ${musicResponse.status}`);
+  }
+
   catalog = await catalogResponse.json();
   const musicPayload = await musicResponse.json();
   musicLibrary = musicPayload.tracks || [];
-  const saved = getSavedConfig();
-  memoryHistory = getSavedHistory();
-  renderPilotName(getSavedPilotName());
-  runtimeConfig = saved;
-  buildConfigForm(saved || catalog.recommended);
-  renderServerSetupNotice();
+  applyRuntimeSettings(catalog.runtime);
+  buildConfigForm(
+    catalog.recommended.map((item) => ({
+      ...item,
+      api_key: "",
+      has_api_key: item.server_ready,
+    })),
+  );
+  renderConfiguredProviders(
+    catalog.recommended.map((item) => ({
+      ...item,
+      api_key: "",
+      has_api_key: item.server_ready,
+    })),
+  );
   renderMusicLibrary();
   renderHistory();
+  renderCouncilArchive();
+  renderServerSetupNotice();
+  setValidationStatus("Sign in to validate and save your own MAGI provider keys.", "pending");
+  setAuthMode("login");
+  setUserIdentity("");
+  switchView("inference");
 
-  if (saved) {
-    renderConfiguredProviders(saved);
-    consensusOutput.textContent = "Local MAGI configuration restored. Credentials remain server-side.";
-    systemStatus.textContent = "STANDBY";
-    switchView("inference");
-  } else {
-    renderConfiguredProviders(catalog.recommended);
-    consensusOutput.textContent = "Open the settings deck to configure the MAGI council.";
-    systemStatus.textContent = "CONFIG REQUIRED";
-    switchView("config");
+  userToken = getSavedToken();
+  if (userToken) {
+    try {
+      await loadUserBundle();
+      if (!allProvidersReady(runtimeConfig)) {
+        consensusOutput.textContent = `Personal MAGI profile restored for ${currentUsername}, but the bridge remains locked until three valid APIs are configured.`;
+        systemStatus.textContent = "CONFIG REQUIRED";
+        switchView("config");
+        return;
+      }
+      consensusOutput.textContent = `Personal MAGI profile restored for ${currentUsername}.`;
+      systemStatus.textContent = "STANDBY";
+      return;
+    } catch {
+      clearToken();
+    }
   }
+
+  showAuthGate(true);
+  consensusOutput.textContent = "Authenticate to load your personal MAGI council and history.";
+  systemStatus.textContent = "AUTH REQUIRED";
 }
 
 bootstrap().catch((error) => {

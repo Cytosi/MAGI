@@ -6,6 +6,8 @@ from pathlib import Path
 
 
 DEFAULT_DOUBAO_MODEL = "doubao-seed-2-0-lite-260215"
+DEFAULT_PILOT_NAME = "Shinji Ikari"
+DEFAULT_ADMIN_SESSION_HOURS = 12
 LEGACY_DOUBAO_MODELS = {
     "doubao-seed-1-6-thinking-250715",
 }
@@ -29,6 +31,27 @@ load_local_env()
 
 def _env(key: str, default: str = "") -> str:
     return os.getenv(key, default).strip()
+
+
+def get_admin_password() -> str:
+    return _env("ADMIN_PASSWORD")
+
+
+def is_admin_auth_configured() -> bool:
+    return bool(get_admin_password())
+
+
+def get_admin_session_hours() -> int:
+    raw = _env("ADMIN_SESSION_HOURS", str(DEFAULT_ADMIN_SESSION_HOURS))
+    try:
+        value = int(raw)
+    except ValueError:
+        return DEFAULT_ADMIN_SESSION_HOURS
+    return min(max(value, 1), 72)
+
+
+def get_runtime_config_path() -> Path:
+    return Path(_env("MAGI_RUNTIME_CONFIG", "data/runtime_config.json"))
 
 
 @dataclass(frozen=True)

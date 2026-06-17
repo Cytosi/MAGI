@@ -16,6 +16,30 @@
     <div class="grid"></div>
     <div class="scanline"></div>
     <div class="frame-noise"></div>
+    <section id="authGate" class="auth-gate">
+      <div class="panel auth-panel">
+        <div class="module-head">
+          <span class="module-tag">PILOT AUTH</span>
+        </div>
+        <p class="module-copy">
+          Sign in to load your own MAGI keys, runtime settings, and private deliberation archive.
+        </p>
+        <div class="auth-tabs">
+          <button type="button" id="showLoginButton" class="auth-tab is-active">LOGIN</button>
+          <button type="button" id="showRegisterButton" class="auth-tab">REGISTER</button>
+        </div>
+        <form id="authForm" class="auth-form">
+          <label for="authUsername">Username</label>
+          <input id="authUsername" name="authUsername" type="text" autocomplete="username" />
+          <label for="authPassword">Password</label>
+          <input id="authPassword" name="authPassword" type="password" autocomplete="current-password" />
+          <div class="action-row auth-actions">
+            <button type="submit" id="authSubmitButton">LOGIN</button>
+          </div>
+        </form>
+        <div id="authStatus" class="auth-status">Waiting for pilot authentication.</div>
+      </div>
+    </section>
 
     <main class="shell">
       <header class="title-bar panel">
@@ -27,6 +51,10 @@
           <div class="status-inline">
             <span>STATUS</span>
             <strong id="systemStatus">BOOTING</strong>
+          </div>
+          <div class="status-inline">
+            <span>USER</span>
+            <strong id="currentUserLabel">ANONYMOUS</strong>
           </div>
           <div class="status-inline">
             <span>DECK</span>
@@ -46,7 +74,7 @@
               />
               <small>WELCOME, PILOT</small>
               <strong id="pilotNameDisplay">SHINJI IKARI</strong>
-              <small>ENTRY PLUG LINKED</small>
+              <small id="pilotStatusDisplay">ENTRY PLUG STANDBY</small>
             </div>
           </div>
           <div class="stage-ornament support-right">
@@ -116,9 +144,24 @@
             <section class="panel module verdict-panel">
               <div class="module-head verdict-head">
                 <span class="module-tag">RESOLUTION</span>
-                <div id="evaluationMeta" class="evaluation-meta">Awaiting evaluator output.</div>
+                <div class="verdict-actions">
+                  <button type="button" id="toggleCouncilArchiveButton" class="ghost-button" disabled>
+                    OPEN COUNCIL LOG
+                  </button>
+                  <div id="evaluationMeta" class="evaluation-meta">Awaiting evaluator output.</div>
+                </div>
               </div>
               <pre id="consensusOutput">Open the settings deck, configure the MAGI council, and begin deliberation.</pre>
+            </section>
+
+            <section id="councilArchivePanel" class="panel module council-archive-panel hidden">
+              <div class="module-head">
+                <span class="module-tag">COUNCIL LOG</span>
+                <div id="councilArchiveStatus" class="evaluation-meta">No deliberation record yet.</div>
+              </div>
+              <div id="councilArchiveGrid" class="council-archive-grid">
+                <div class="history-empty">No council replies archived yet.</div>
+              </div>
             </section>
 
             <section class="panel module history-panel">
@@ -148,8 +191,8 @@
             </div>
 
             <p class="module-copy">
-              Assign three distinct providers to the MAGI council. Each node must use a unique
-              provider endpoint, while credentials remain server-side.
+              Each user stores a separate MAGI council on the server. Configure three distinct
+              providers, save your own API keys, and your account will keep its own history.
             </p>
 
             <div id="serverSetupNotice" class="server-setup-notice">
@@ -160,7 +203,11 @@
 
             <div class="action-row">
               <button type="button" class="ghost-button" id="useRecommended">LOAD RECOMMENDED SETUP</button>
+              <button type="button" class="ghost-button" id="validateProvidersButton">TEST CONNECTIVITY</button>
               <button type="submit" form="configForm" id="saveConfigButton">SAVE CONFIGURATION</button>
+            </div>
+            <div id="configValidationStatus" class="config-validation-status pending">
+              Connectivity validation pending.
             </div>
           </section>
 
@@ -172,14 +219,9 @@
 
               <div class="tuning-stack">
                 <article class="tuning-block">
-                  <label for="pilotName">Pilot Name</label>
-                  <input
-                    id="pilotName"
-                    name="pilotName"
-                    type="text"
-                    value="Shinji Ikari"
-                    placeholder="Enter pilot name"
-                  />
+                  <label>Current Pilot</label>
+                  <div id="configUserLabel" class="identity-chip">ANONYMOUS</div>
+                  <div id="accountStatus" class="auth-status">Sign in to edit your server-side MAGI council.</div>
                 </article>
                 <article class="tuning-block">
                   <label for="systemPrompt">System Directive</label>
@@ -205,11 +247,11 @@
               </div>
               <div class="notes">
                 <p>All MAGI nodes must use unique providers.</p>
-                <p>API credentials are hosted on the server and never stored in the browser.</p>
+                <p>Each user account stores its own provider keys on the server.</p>
                 <p>Qwen, DeepSeek, and Doubao use OpenAI-compatible chat endpoints.</p>
-                <p>Custom mode requires a server-side integration before public deployment.</p>
-                <p>Initialize providers on the server by editing the project `.env` file.</p>
-                <p>Public deployments should avoid exposing provider secrets to frontend users.</p>
+                <p>Saved keys are never returned to the browser. Only storage state is shown.</p>
+                <p>Custom mode requires a compatible `chat/completions` endpoint.</p>
+                <p>Your private history archive is also stored server-side and loaded at login.</p>
               </div>
             </section>
           </section>

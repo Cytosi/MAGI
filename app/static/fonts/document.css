@@ -1,0 +1,484 @@
+@font-face {
+    font-family: EVAMatisseClassic;
+    src: url(./EVA-Matisse-Classic.woff2);
+    font-weight: 900;
+}
+
+@font-face {
+    font-family: FOT-MatissePro-EB;
+    src: url(./FOT-MatissePro-EB.woff2);
+    font-weight: 900;
+}
+
+@font-face {
+    font-family: NotoSerifSC-Black;
+    src: url(./NotoSerifSC-Black.woff2);
+    font-weight: 900;
+}
+
+@font-face {
+    font-family: SourceHanSerifCN-Heavy;
+    src: url('./SourceHanSerifCN-Heavy.woff2') format('woff2');
+    font-weight: 900;
+}
+
+@font-face {
+    font-family: SourceHanSerifCN-Heavyall;
+    src: url('./SourceHanSerifCN-Heavyall.ttf');
+    /* 关键修复：显式声明这个字体的粗细为 900，对应 JS 里的 fontWeight = 900 */
+    font-weight: 900; 
+}
+
+/*
+"MS Pゴシック","MS P明朝",
+"ヒラギノ明朝","游明朝", "Yu Mincho", "游明朝体", YuMincho,
+"微軟正黑體",
+"ヒラギノ明朝 Pro","PT Serif",
+*/
+:root {
+    --color-red: #a42121;
+    --color-background: #252525;
+    --color-font: #EEE;
+}
+
+html {
+    font: 24px/1.4 sans-serif;
+
+    font-family:
+        EVAMatisseClassic,
+        FOT-MatissePro-EB,
+        NotoSerifSC-Black,
+        SourceHanSerifCN-Heavy,
+        SourceHanSerifCN-Heavyall,
+        serif;
+
+
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: grayscale;
+    background: var(--color-background);
+    color: var(--color-font);
+    background-position: top left;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23222222' viewBox='0 0 200 339'%3E%3Cpath d='M100,69.6l87,50v100l-87,50l-87-50v-100L100,69.6zM87-18v68L0,100L-18,0M380,0l-180,100L113,50V-18M0,239l87,50V400H-198M400,400H113v-111l87-50'/%3E%3C/svg%3E");
+    background-size: 16px;
+}
+
+html[data-output="true"] {
+    overflow: hidden;
+}
+
+body {
+    margin: 0;
+    padding: 20px 0 100px;
+}
+
+input,
+textarea,
+button {
+    font: inherit;
+}
+
+a {
+    text-decoration: none;
+    color: var(--color-red);
+}
+
+h1,
+h2,
+h3,
+h4 {
+    margin: 0;
+}
+
+header {
+    padding: 40px 20px 20px;
+    line-height: 1;
+}
+
+header h1 {
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 48px;
+    font-family: serif;
+    width: 428px;
+    max-width: 100%;
+    height: 48px;
+    white-space: nowrap;
+    overflow: hidden;
+    color: transparent;
+    background: url(logo@2x.png) no-repeat center center;
+    background-size: contain;
+}
+
+header h2 {
+    font-family: inherit;
+    font-weight: 400;
+    font-family: 'Times New Roman', Times, serif;
+    padding-top: 0.5em;
+}
+
+h3.tip {
+    padding: 20px;
+    font-size: 14px;
+    color: var(--color-red);
+}
+
+p.tip {
+    margin: 0;
+    padding: 10px 0;
+    font-size: 14px;
+    line-height: 28px;
+    color: var(--color-red);
+}
+
+p.tip a {
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+.layout-list {
+    overflow: hidden;
+    position: relative;
+    z-index: 0;
+    width: calc(162px * 4);
+}
+
+.layout-list .item {
+    float: left;
+    cursor: pointer;
+    padding: 1px;
+    width: 160px;
+    height: 120px;
+    position: relative;
+}
+
+.layout-list .item img {
+    display: block;
+    width: 160px;
+    height: 120px;
+    pointer-events: none;
+}
+
+.layout-list .item b {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+.layout-list .item[data-checked] {
+    background: var(--color-red);
+    box-shadow: 0 0 0 1px var(--color-red);
+    z-index: 1;
+}
+
+.ui-switch-box {
+    cursor: pointer;
+    margin: 0.5em;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.ui-switch-box .switch {
+    display: inline-block;
+    vertical-align: middle;
+    margin-top: -0.3em;
+    width: 2.4em;
+    height: 1.4em;
+    border-radius: 9em;
+    background: rgba(0, 0, 0, 0.2);
+    background: #000;
+    transition: background-color 0.3s ease;
+}
+
+.ui-switch-box .switch .slider {
+    display: inline-block;
+    vertical-align: top;
+    width: 1em;
+    height: 1em;
+    border-radius: 9em;
+    background: var(--color-font);
+    margin: 0.2em;
+    position: relative;
+    transition: transform 0.3s ease;
+}
+
+.ui-switch-box[data-checked] .switch {
+    background: currentColor;
+}
+
+.ui-switch-box[data-checked] .switch .slider {
+    transform: translateX(1em);
+}
+
+[data-text]:before {
+    content: attr(data-text);
+}
+
+.ui-tabs-box {
+    display: inline-block;
+    border-radius: 3px;
+    overflow: hidden;
+    text-align: center;
+}
+
+.ui-tabs-box a {
+    float: left;
+    cursor: pointer;
+    line-height: 1;
+    padding: 8px;
+    transition: color 0.3s ease, background-color 0.3s ease;
+    background: var(--color-font);
+}
+
+.ui-tabs-box a[data-checked="true"] {
+    background: currentColor;
+}
+
+.ui-tabs-box a[data-checked="true"]:before {
+    color: var(--color-font);
+}
+
+section {
+    padding: 20px;
+}
+
+section h2 {
+    padding-bottom: 10px;
+}
+
+section h3 {
+    padding-top: 0.5em;
+    font-size: 1.2em;
+}
+
+footer {
+    padding: 100px 0;
+    font-size: 0.8em;
+}
+
+footer h2 {
+    padding: 0;
+}
+
+.output-box canvas {
+    max-width: 100%;
+}
+
+.config-item {
+    padding: 10px 0;
+}
+
+.exemple-list {
+    overflow: hidden;
+    padding: 10px 0 0;
+}
+
+.exemple-item {
+    float: left;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 20px 30px;
+    border-radius: 4px;
+    margin: 0 10px 10px 0;
+}
+
+.exemple-item span {
+    display: block;
+}
+
+.exemple-item[data-checked="true"] {
+    background: var(--color-red);
+}
+
+.input-item h4 {
+    margin: 0;
+}
+
+.ctrl-box {
+    padding: 15px 0;
+}
+
+.btn {
+    display: inline-block;
+    background-color: #333;
+    color: #FFF;
+    border: 0;
+    font-weight: bold;
+    line-height: 3;
+    padding: 0 1em;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.btn.current {
+    background-color: var(--color-red);
+}
+
+.btn:disabled {
+    background-color: #2D2d2d;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.btn.min {
+    font-size: 0.8em;
+    line-height: 2.6;
+    padding: 0 0.8em;
+}
+
+.ui-footer {
+    padding: 15px;
+}
+
+.ui-footer a {
+    display: inline-block;
+    padding: 0.5em 0.8em;
+}
+
+@media (min-width: 1100px) {
+    .content-box {
+        overflow: hidden;
+        position: relative;
+        padding-left: 660px;
+        min-height: 480px;
+    }
+
+    .content-box .output-box {
+        width: 640px;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+}
+
+@media (max-width: 600px) {
+    html {
+        font-size: 18px;
+    }
+
+    section,
+    header {
+        padding: 15px;
+    }
+
+    header {
+        font-size: 0.9em;
+        padding: 40px 15px 15px;
+    }
+
+    .layout-list {
+        white-space: nowrap;
+        overflow: auto;
+        font-size: 0;
+        width: auto;
+    }
+
+    .layout-list .item {
+        float: none;
+        display: inline-block;
+    }
+
+    .output-box {
+        padding: 0;
+    }
+
+    .output-box h2 {
+        padding: 15px;
+    }
+
+    .output-box canvas {
+        display: block;
+        height: auto !important;
+    }
+}
+
+input {
+    border: 2px solid currentColor;
+    margin: 0.4em 0;
+    padding: 0.3em 0.5em;
+    width: 600px;
+    box-sizing: border-box;
+    max-width: 100%;
+    outline: none;
+    line-height: 1;
+}
+
+input:focus {
+    border-color: var(--color-red);
+}
+
+.app:before {
+    position: fixed;
+    top: 0;
+    right: 0;
+    content: '生成中...';
+    background: #111;
+    color: var(--color-red);
+    padding: 0.5em 0.8em;
+    margin: 0.8em;
+    border-radius: 4px;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.app[data-loading="true"] {
+    cursor: wait;
+}
+
+.app[data-loading="true"] > * {
+    pointer-events: none;
+}
+
+.app[data-loading="true"]:before {
+    opacity: 1;
+}
+
+.canvas-box {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.ui-shadow {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1;
+    background: rgba(0, 0, 0, 0.5);
+    overflow: auto;
+    overflow-y: scroll;
+    overscroll-behavior: contain;
+}
+
+.ui-output-box {
+    text-align: center;
+    font-size: 14px;
+    background: #222;
+    width: 800px;
+    max-width: 100%;
+    margin: 40px auto;
+    padding: 20px;
+    box-sizing: border-box;
+    box-shadow: 0 0 40px rgba(50, 10, 10, 0.4);
+}
+
+.ui-output-box h2 {
+    padding-bottom: 10px;
+}
+
+.ui-output-box img {
+    display: block;
+    width: 800px;
+    max-width: 100%;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+    margin: 10px 0 40px;
+}
+
+.ui-output-box .ctrl-box {
+    padding: 10px 0;
+}

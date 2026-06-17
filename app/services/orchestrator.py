@@ -13,7 +13,9 @@ from app.models import (
     ProviderSelection,
     ProviderTestRequest,
     ProviderTestResponse,
+    RuntimeSettings,
 )
+from app.services.user_store import get_provider_api_key
 from app.services.providers import ProviderClient
 
 
@@ -66,10 +68,15 @@ class MagiOrchestrator:
                 server_ready=bool(env_defaults["qwen"]["api_key"]),
             ),
         ]
-        return CatalogResponse(presets=presets, recommended=recommended)
+        return CatalogResponse(
+            presets=presets,
+            recommended=recommended,
+            runtime=RuntimeSettings(),
+            auth_required=True,
+        )
 
-    async def test_providers(self, request: ProviderTestRequest) -> ProviderTestResponse:
-        providers = self._build_provider_clients(request.providers)
+    async def test_providers(self, request: ProviderTestRequest, username: str | None = None) -> ProviderTestResponse:
+        providers = self._build_provider_clients(request.providers, username)
         results = await asyncio.gather(
             *[
                 provider.generate(
@@ -84,8 +91,8 @@ class MagiOrchestrator:
         ready_count = sum(1 for item in results if item.status == "ready")
         return ProviderTestResponse(results=results, ready_count=ready_count)
 
-    async def deliberate(self, request: ChatRequest) -> ChatResponse:
-        providers = self._build_provider_clients(request.providers)
+    async def deliberate(self, request: ChatRequest, username: str | None = None) -> ChatResponse:
+        providers = self._build_provider_clients(request.providers, username)
         council = await asyncio.gather(
             *[
                 provider.generate(
@@ -106,7 +113,7 @@ class MagiOrchestrator:
             evaluation=evaluation,
         )
 
-    def _build_provider_clients(self, selections: list[ProviderSelection]) -> list[ProviderClient]:
+    def _build_provider_clients(self, selections: list[ProviderSelection], username: str | None = None) -> list[ProviderClient]:
         env_defaults = get_env_provider_defaults()
         preset_map = {item.key: item for item in get_provider_presets()}
         clients: list[ProviderClient] = []
@@ -117,7 +124,11 @@ class MagiOrchestrator:
             label = selection.label.strip() or (preset.label if preset else selection.provider_key)
             model = selection.model.strip() or env_config.get("model", "") or (preset.default_model if preset else "")
             base_url = selection.base_url.strip() or env_config.get("base_url", "") or (preset.base_url if preset else "")
-            api_key = env_config.get("api_key", "")
+            api_key = (
+                selection.api_key.strip()
+                or (get_provider_api_key(username, selection.slot, selection.provider_key) if username else "")
+                or env_config.get("api_key", "")
+            )
 
             clients.append(
                 ProviderClient(
