@@ -6,6 +6,8 @@
 
 ![MAGI System visualization](outputs/magi-system-visualization.png)
 
+在线预览：<https://www.happybirthdaycherry.top/>
+
 ## 功能
 
 - 打开即配置：首次进入页面自动弹出配置向导
