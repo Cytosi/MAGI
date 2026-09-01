@@ -2,6 +2,10 @@
 
 一个可外部访问的 EVA 三贤人系统，支持在打开页面时通过交互向导为三位贤人选择不同 AI，并提供 EVA 风格前端控制台。
 
+## 界面预览
+
+![MAGI System visualization](outputs/magi-system-visualization.png)
+
 ## 功能
 
 - 打开即配置：首次进入页面自动弹出配置向导
